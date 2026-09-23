@@ -1,11 +1,4 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  Image,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { SPACE_TYPE_LABEL, type Space } from '../types';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
@@ -13,22 +6,12 @@ import { formatCOP, formatCapacity } from '../utils/format';
 
 interface ItemCardProps {
   item: Space;
-  onPress: (item: Space) => void;
   compact?: boolean;
 }
 
-export function ItemCard({
-  item,
-  onPress,
-  compact = false,
-}: ItemCardProps): React.JSX.Element {
+export function ItemCard({ item, compact = false }: ItemCardProps): React.JSX.Element {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={() => onPress(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Ver ${item.name}`}
-    >
+    <View style={styles.card}>
       <Image source={item.image} style={styles.image} resizeMode="cover" />
 
       <View style={styles.body}>
@@ -71,7 +54,7 @@ export function ItemCard({
 
         <Text style={styles.price}>{formatCOP(item.pricePerHour)} / hora</Text>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -82,10 +65,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: 'hidden',
-  },
-  cardPressed: {
-    backgroundColor: COLORS.surfaceAlt,
-    borderColor: COLORS.accent,
   },
   image: {
     width: '100%',

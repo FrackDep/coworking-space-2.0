@@ -1,120 +1,93 @@
-# Semana 08 — Autenticación Completa
+# Semana 09 — Animaciones Básicas
 
 Proyecto del dominio **coworking space**: **Nido Coworking**, la app de un edificio
 de coworking de 5 pisos en Bogotá, con 6 tipos de espacio y precios en COP.
 
-Esta es la rama **`semana-08`**: contiene el proyecto completo hasta esta
+Esta es la rama **`semana-09`**: contiene el proyecto completo hasta esta
 semana, con el código en la **raíz** del repositorio. Parte de lo que dejó
-`semana-07` y le suma lo de esta semana, así que la historia de la rama son
-los 8 commits de las semanas 01 a 08.
+`semana-08` y le suma lo de esta semana, así que la historia de la rama son
+los 9 commits de las semanas 01 a 09.
 
 ## Qué pide el bootcamp
 
-1. **`useAuthStore`:** store de Zustand con `user`, `isAuthenticated`, `login()`,
-   `logout()` y `refreshTokens()`
-2. **`LoginScreen`:** formulario con React Hook Form + Zod que llama al store y
-   maneja el error de credenciales
-3. **`RegisterScreen`:** formulario con usuario, correo, contraseña y confirmación
-4. **Navegación condicional:** stack de autenticación cuando no hay sesión y
-   stack protegido cuando sí la hay, sin re-render visible
-5. **Tokens en SecureStore:** nunca en AsyncStorage ni en MMKV sin cifrar
-6. **Interceptor de Axios:** detectar el 401, renovar el token y reintentar la
-   petición original
-7. **`ProfileScreen`:** datos del usuario autenticado, coherentes con el dominio
-
-Los dos ejercicios del bootcamp (JWT con dummyjson y OAuth PKCE con Expo
-AuthSession) se integran dentro de la app: el de JWT es el propio login, y el de
-OAuth es el botón **Continuar con GitHub** del login.
+1. **`Animated.timing`, `Animated.spring` y `Animated.decay`** con sus sensaciones
+   distintas
+2. **Combinar animaciones:** `Animated.parallel`, `Animated.sequence` y
+   `Animated.stagger`
+3. **`interpolate`** para animar lo que no es numérico: colores, rotaciones,
+   escalas y anchos
+4. **`LayoutAnimation`** para animar cambios de layout, con el flag de Android
+5. **Cinco comportamientos en el proyecto:** entrada del detalle, feedback
+   táctil en las tarjetas, barra de progreso, entrada en cascada de la lista y
+   animación de layout al agregar o quitar elementos
+6. **Nada de `useNativeDriver: false` donde debe ser `true`**
 
 ## Qué implementé
 
-- **`src/stores/authStore.ts`:** store de Zustand con `persist` y `partialize`
-  (solo se persisten `user` e `isAuthenticated`; los tokens viven aparte, en
-  SecureStore). Acciones: `login`, `register`, `signInWithOAuth`, `logout`,
-  `refreshTokens`, `restoreSession` y `clearError`.
-- **`src/services/tokenService.ts`:** envoltorio de SecureStore con
-  `saveTokens`, `getAccessToken`, `getRefreshToken`, `clearTokens`, más la
-  lectura del JWT (`readTokenExpiry`, `readTokenClaims`) con `jwt-decode`.
-- **`src/services/authService.ts`:** `login` contra
-  `POST https://dummyjson.com/auth/login` (con `expiresInMins: 30`), `register`
-  simulado, `refreshTokens` contra `POST /auth/refresh` y `getProfile` contra
-  `GET /auth/me`.
-- **`src/services/api.ts`:** interceptor de petición que inyecta
-  `Authorization: Bearer <token>` y interceptor de respuesta que ante un **401**
-  pide tokens nuevos, actualiza el encabezado y **reintenta la petición
-  original** una sola vez (bandera `retried`). Si no hay forma de renovar, cierra
-  la sesión.
-- **Navegación condicional:** `RootNavigator` muestra `AuthNavigator`
-  (Login · Crear cuenta) o `AppNavigator` (Espacios · Guardados · Mi cuenta ·
-  Ajustes) según `isAuthenticated`, con una pantalla de espera mientras se
-  restaura la sesión.
-- **`restoreSession()`:** al abrir la app se leen los tokens de SecureStore; si
-  el access token sigue vigente se entra directo, y si ya expiró se renueva con
-  el refresh token (o se cierra la sesión si tampoco sirve).
-- **`ProfileScreen` (dominio):** avatar con iniciales (o la foto real si la
-  sesión es de GitHub), plan de membresía, año de alta, piso preferido, horas
-  consumidas del plan, espacios guardados, datos que llegan del servidor con
-  `GET /auth/me`, el estado del token con la hora de vencimiento y los botones
-  **Renovar sesión** y **Cerrar sesión**.
-- **`SettingsScreen`:** se conserva todo lo de la semana 07 (preferencias y
-  código de acceso) y se añade la sección **Sesión**, que recuerda que los
-  tokens van a SecureStore y permite cerrar sesión desde ahí.
+Los cinco comportamientos exigidos, aplicados al dominio del edificio:
 
-## Notas técnicas de la semana
+| # | Comportamiento | Dónde | Cómo |
+| --- | --- | --- | --- |
+| 1 | Entrada del detalle | `DetailScreen` | `Animated.parallel`: opacidad 0 → 1 y `translateY` 30 → 0 en 500 ms |
+| 2 | Feedback táctil | `AnimatedCard` (tarjetas del catálogo) | `Animated.spring`: escala 1 → 0.95 al presionar y vuelta a 1 con rebote |
+| 3 | Barra de progreso | `ProgressBar` | `interpolate` de ancho `0% → 100%` y de color rojo → amarillo → verde |
+| 4 | Entrada en cascada | `HomeScreen` | `Animated.stagger(80, …)`: cada espacio aparece con 80 ms de retraso |
+| 5 | Cambio de layout | `HomeScreen` y `SavedScreen` | `LayoutAnimation.configureNext(easeInEaseOut)` antes de agregar o quitar |
 
-**Registro simulado.** dummyjson.com no tiene endpoint de registro, así que
-`register()` crea la cuenta en el dispositivo con una sesión de demostración
-(tokens con el prefijo `demo-`) después de validar el formulario. El ingreso con
-usuario y contraseña sí se valida contra la API real: las credenciales de prueba
-son `emilys` / `emilyspass`, y la pantalla de login tiene un botón que las
-rellena.
+Además:
 
-**Renovación sin red.** Cuando el refresh token es de demostración, la renovación
-se resuelve en el dispositivo en vez de llamar a `/auth/refresh`, para que la
-sesión de prueba no se caiga sola. Con una sesión real, la renovación sí va a la
-API.
+- **`AnimatedButton`:** comprime con `Animated.timing` (80 ms) al presionar y
+  vuelve con `Animated.spring`; se usa en “Ver más espacios”, guardar, renovar
+  sesión, cerrar sesión y los reintentos.
+- **`src/utils/layoutAnimation.ts`:** activa
+  `UIManager.setLayoutAnimationEnabledExperimental?.(true)` en Android **a nivel
+  de módulo** (fuera del componente, como pide el bootcamp) y expone
+  `animateNextLayout()` para llamarlo justo antes del cambio de estado.
+- **Barra de progreso con datos del dominio:** en el catálogo mide la
+  **ocupación del edificio** (espacios libres sobre el total) y en el detalle la
+  **ocupación del piso** de ese espacio, calculada con el catálogo que ya está en
+  caché de TanStack Query.
+- **Paginación animada:** el catálogo respeta la preferencia de espacios por
+  página y el botón **Ver más espacios** añade el siguiente bloque con
+  `LayoutAnimation`; los espacios nuevos entran en cascada (`stagger`) y los que
+  ya estaban no se vuelven a animar.
+- **`ItemCard` pasó a ser presentacional:** ya no lleva su propio `Pressable`,
+  así el toque y la animación de escala los aporta `AnimatedCard` sin dobles
+  respuestas al tacto.
 
-**OAuth PKCE (ejercicio 02).** En `src/services/oauthService.ts` está configurado
-el flujo completo con `expo-auth-session` y PKCE: `makeRedirectUri` con el esquema
-`coworking-space` (declarado en `app.json`), `usePKCE: true`, canje del
-`code` + `code_verifier` por un token y lectura del perfil de GitHub. Para que
-funcione de verdad hay que: crear una OAuth App en GitHub, copiar su Client ID en
-`EXPO_PUBLIC_GITHUB_CLIENT_ID`, registrar la URL de redirección que genera
-`makeRedirectUri()` y correr **un build nativo** (`pnpm expo run:android`), porque
-en Expo Go el esquema propio de la app no se puede usar. Sin configurar, el botón
-explica exactamente qué falta en vez de fallar en silencio.
+## Cómo se respetó el driver nativo
 
-**Sin `any`.** El interceptor usa una configuración de Axios extendida
-(`retried?: boolean`) y los datos del servidor se validan con tipos explícitos.
+`useNativeDriver: true` en todo lo que es opacidad y transformación (entradas,
+escala, desplazamientos) y `useNativeDriver: false` **solo** en la barra de
+progreso, porque anima `width` y `backgroundColor`, que no pueden ir por el hilo
+nativo. No hay ningún aviso de driver mal puesto.
 
 ## Verificación
 
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm exec tsc --noEmit` | 0 errores |
-| `expo export --platform android` | 1163 módulos |
-| Comprobaciones de lógica en Node | 27 correctas, 0 fallas |
+| `expo export --platform android` | 1167 módulos |
+| Comportamientos exigidos presentes | 5 de 5 (`parallel`, `spring`, `interpolate`, `stagger`, `LayoutAnimation`) |
+| `useNativeDriver` | `true` en opacidad y transformaciones; `false` solo en ancho y color |
 | Importaciones fuera de `package.json` | 0 |
-
-Las 27 comprobaciones cubren: validación Zod del login y del registro (8 casos),
-guardado/lectura/borrado de tokens en SecureStore (6), lectura del `exp` de un JWT
-real y de un token de demostración (2), el mapeo del perfil de dominio (7), la
-renovación sin red, el registro simulado y los cuatro caminos de
-`restoreSession` (4).
 
 ## Estructura de esta semana
 
 ```
-semana-08/  (raíz del repositorio)
+semana-09/  (raíz del repositorio)
 ├── App.tsx                        QueryClient + hidratación + restoreSession
 ├── index.js                       Registro del componente raíz
 ├── app.json                       Configuración (incluye scheme para OAuth)
-├── package.json                   Dependencias (auth-session, crypto, jwt-decode)
+├── package.json                   Dependencias
 └── src/
     ├── components/
+    │   ├── AnimatedCard.tsx       Feedback de tap con spring
+    │   ├── AnimatedButton.tsx     timing al presionar + spring al soltar
+    │   ├── ProgressBar.tsx        Ancho y color interpolados
     │   ├── FormField.tsx          Controller + TextInput + error
-    │   ├── GithubSignInButton.tsx Flujo OAuth PKCE (o aviso de configuración)
-    │   └── ItemCard.tsx           Tarjeta con modo compacto
+    │   ├── GithubSignInButton.tsx Flujo OAuth PKCE
+    │   └── ItemCard.tsx           Tarjeta presentacional
     ├── hooks/
     │   ├── usePreferences.ts      Preferencias MMKV reactivas
     │   └── useSpaces.ts           useQuery con caché offline
@@ -127,28 +100,23 @@ semana-08/  (raíz del repositorio)
     │   ├── authSchema.ts          loginSchema y registerSchema
     │   └── spaceSchema.ts         Reglas Zod de los espacios
     ├── screens/
-    │   ├── LoginScreen.tsx        RHF + Zod + OAuth + credenciales de prueba
+    │   ├── HomeScreen.tsx         Cascada, layout animado y ocupación
+    │   ├── DetailScreen.tsx       Entrada con parallel y ocupación del piso
+    │   ├── SavedScreen.tsx        Quitar guardados con animación de layout
+    │   ├── LoginScreen.tsx        RHF + Zod + OAuth
     │   ├── RegisterScreen.tsx     Registro validado
-    │   ├── ProfileScreen.tsx      Cuenta del miembro y sesión
-    │   ├── HomeScreen.tsx         Catálogo con caché offline
-    │   ├── DetailScreen.tsx       Detalle del espacio
+    │   ├── ProfileScreen.tsx      Cuenta + horas del plan animadas
     │   ├── CreateScreen.tsx       Creación validada
     │   ├── EditScreen.tsx         Edición con reset()
-    │   ├── SavedScreen.tsx        Guardados (Zustand)
     │   └── SettingsScreen.tsx     Preferencias + Sesión + SecureStore
-    ├── services/
-    │   ├── api.ts                 Axios + interceptores de auth
-    │   ├── authService.ts         login · register · refresh · me
-    │   ├── oauthService.ts        OAuth PKCE con GitHub
-    │   └── tokenService.ts        SecureStore + lectura del JWT
+    ├── services/                  api · authService · oauthService · tokenService
     ├── storage/mmkv.ts            MMKV con respaldo y suscripciones
-    ├── stores/
-    │   ├── authStore.ts           Sesión global (Zustand + SecureStore)
-    │   └── savedStore.ts          Guardados (Zustand)
+    ├── stores/                    authStore · savedStore
     ├── theme/index.ts             COLORS · TYPOGRAPHY · SPACING · RADIUS
     ├── types/index.ts             Modelos del dominio + tipos de auth
     └── utils/
         ├── format.ts              Precios COP, capacidad, horas y hora
+        ├── layoutAnimation.ts     Flag de Android + animación de layout
         ├── memberMapper.ts        Usuario de la API → miembro del dominio
         ├── spaceCache.ts          Serialización de la caché
         ├── spaceMapper.ts         API → dominio
@@ -160,7 +128,7 @@ semana-08/  (raíz del repositorio)
 Desde tu copia del repositorio (mira la portada si aún no la tienes):
 
 ```bash
-git checkout semana-08
+git checkout semana-09
 pnpm install
 pnpm start
 ```
@@ -168,9 +136,11 @@ pnpm start
 Al cambiar de rama vuelve a ejecutar `pnpm install`: cada semana puede traer
 dependencias nuevas.
 
-Al abrir: pantalla de login. Entra con `emilys` / `emilyspass` (o toca el botón
-de credenciales de prueba), y llegarás al catálogo con la pestaña *Mi cuenta* ya
-disponible. El botón de cerrar sesión está en *Mi cuenta* y en *Ajustes*.
+Entra con `emilys` / `emilyspass`. Qué mirar: la cascada de las tarjetas al abrir
+el catálogo, el encogido de la tarjeta al mantenerla presionada, la entrada del
+detalle al tocar un espacio, la barra de ocupación al cambiar de piso y el
+reacomodo animado de la lista al tocar **Ver más espacios** o al quitar un
+guardado.
 
 ## Ejecutar en web
 
@@ -199,20 +169,24 @@ La sesión también funciona en web: los tokens usan esa misma capa y el cierre 
 sesión se confirma con el diálogo propio de la app (`ConfirmDialog`), que se ve
 igual en el navegador que en el móvil.
 
+Las animaciones se ven en web; el feedback táctil usa `useNativeDriver: false` en
+el navegador (no existe el driver nativo) y `LayoutAnimation` se omite ahí, porque
+la API no está implementada.
+
 
 ## Capturas de esta semana
 
 | Archivo | Pantalla | Cómo llegar |
 | --- | --- | --- |
-| `08-login.png` | Ingreso de miembro | Abrir la app sin sesión |
-| `08-registro.png` | Errores de validación del registro | *Crear cuenta* → tocar el botón con el formulario vacío |
-| `08-perfil.png` | Cuenta, plan y sesión | Entrar → pestaña *Mi cuenta* |
+| `09-cascada.png` | Entrada en cascada del catálogo | Abrir la app: las tarjetas llegan con 80 ms de retraso |
+| `09-detalle.png` | Entrada del detalle y ocupación del piso | Tocar *Sala de Juntas · Aurora* |
+| `09-ocupacion.png` | Barra de ocupación del edificio | Pantalla del catálogo, bajo el buscador |
 
 Las capturas de esta entrega van en
 [`capturas/`](capturas/), dentro de esta rama.
 
 ## Rama y commit de esta semana
 
-Rama **`semana-08`** (una de las 9 ramas encadenadas del repositorio), con el commit:
+Rama **`semana-09`** (una de las 9 ramas encadenadas del repositorio), con el commit:
 
-`Semana 08 — Autenticación Completa`
+`Semana 09 — Animaciones Básicas`

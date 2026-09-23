@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { useSavedStore } from '../stores/savedStore';
+import { animateNextLayout } from '../utils/layoutAnimation';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type Space } from '../types';
 import { formatCOP } from '../utils/format';
@@ -53,11 +54,22 @@ export function SavedScreen(): React.JSX.Element {
   const removeItem = useSavedStore((state) => state.removeItem);
   const clearAll = useSavedStore((state) => state.clearAll);
 
-  const renderItem: ListRenderItem<Space> = useCallback(
-    ({ item }) => (
-      <SavedRow item={item} onRemove={() => removeItem(item.id)} />
-    ),
+  const handleRemove = useCallback(
+    (id: string): void => {
+      animateNextLayout();
+      removeItem(id);
+    },
     [removeItem],
+  );
+
+  const handleClearAll = useCallback((): void => {
+    animateNextLayout();
+    clearAll();
+  }, [clearAll]);
+
+  const renderItem: ListRenderItem<Space> = useCallback(
+    ({ item }) => <SavedRow item={item} onRemove={() => handleRemove(item.id)} />,
+    [handleRemove],
   );
 
   const renderSeparator = useCallback(
@@ -101,7 +113,7 @@ export function SavedScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           items.length > 0 ? (
-            <Pressable onPress={clearAll} style={styles.clearButton}>
+            <Pressable onPress={handleClearAll} style={styles.clearButton}>
               <Text style={styles.clearButtonText}>Limpiar todo</Text>
             </Pressable>
           ) : null

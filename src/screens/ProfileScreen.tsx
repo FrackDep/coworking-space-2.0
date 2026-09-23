@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
+import { AnimatedButton } from '../components/AnimatedButton';
+import { ProgressBar } from '../components/ProgressBar';
 import { getProfile } from '../services/authService';
 import { secureStorageLabel } from '../storage/secureStore';
 import { getAccessToken, readTokenClaims } from '../services/tokenService';
@@ -123,11 +124,17 @@ export function ProfileScreen(): React.JSX.Element {
         <InfoRow label="Usuario" value={user.username} />
         <InfoRow label="Miembro desde" value={user.memberSince} />
         <InfoRow label="Piso preferido" value={`Piso ${user.preferredFloor}`} />
-        <InfoRow
-          label="Horas del mes"
-          value={`${formatHours(user.hoursUsed)} de ${formatHours(user.hoursIncluded)}`}
-        />
         <InfoRow label="Espacios guardados" value={String(savedCount)} />
+
+        <View style={styles.progressCard}>
+          <ProgressBar
+            value={user.hoursUsed / user.hoursIncluded}
+            label="Horas del mes"
+            caption={`${formatHours(user.hoursUsed)} de ${formatHours(
+              user.hoursIncluded,
+            )} del ${MEMBERSHIP_LABEL[user.plan]}`}
+          />
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -180,37 +187,24 @@ export function ProfileScreen(): React.JSX.Element {
           value={expiresAt === null ? 'Sin expiración conocida' : formatClockTime(expiresAt)}
         />
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && styles.buttonPressed,
-          ]}
+        <AnimatedButton
+          label="Renovar sesión"
+          icon="refresh-outline"
+          variant="outline"
+          loading={isRefreshing}
           onPress={() => {
             void handleRefresh();
           }}
-          disabled={isRefreshing}
-          accessibilityRole="button"
           testID="refresh-session-button"
-        >
-          {isRefreshing ? (
-            <ActivityIndicator size="small" color={COLORS.accent} />
-          ) : (
-            <>
-              <Ionicons name="refresh-outline" size={18} color={COLORS.accent} />
-              <Text style={styles.secondaryButtonText}>Renovar sesión</Text>
-            </>
-          )}
-        </Pressable>
+        />
 
-        <Pressable
-          style={({ pressed }) => [styles.logoutButton, pressed && styles.buttonPressed]}
+        <AnimatedButton
+          label="Cerrar sesión"
+          icon="log-out-outline"
+          variant="danger"
           onPress={handleLogout}
-          accessibilityRole="button"
           testID="logout-button"
-        >
-          <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </Pressable>
+        />
       </View>
       <ConfirmDialog
         visible={confirmingLogout}
@@ -344,39 +338,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
+  progressCard: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.accent,
-    minHeight: 46,
-  },
-  secondaryButtonText: {
-    fontSize: TYPOGRAPHY.size.sm,
-    fontWeight: TYPOGRAPHY.weight.semibold,
-    color: COLORS.accent,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  logoutText: {
-    fontSize: TYPOGRAPHY.size.sm,
-    fontWeight: TYPOGRAPHY.weight.semibold,
-    color: COLORS.error,
-  },
-  buttonPressed: {
-    opacity: 0.75,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   empty: {
     flex: 1,

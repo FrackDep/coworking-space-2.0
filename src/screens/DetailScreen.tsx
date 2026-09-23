@@ -1,8 +1,8 @@
-import React from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,10 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 
-import { useSpaceById } from '../hooks/useSpaces';
+import { AnimatedButton } from '../components/AnimatedButton';
+import { ProgressBar } from '../components/ProgressBar';
+import { useSpaceById, useSpaces } from '../hooks/useSpaces';
 import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
-import { SPACE_TYPE_LABEL } from '../types';
+import { SPACE_TYPE_LABEL, type Space } from '../types';
 import { formatCOP, formatCapacity } from '../utils/format';
 import type { HomeStackParamList } from '../navigation/types';
 
@@ -25,22 +27,61 @@ export function DetailScreen(): React.JSX.Element {
   const { id } = route.params;
 
   const { data: space, isLoading, isError, refetch } = useSpaceById(id);
+  const { data: catalog } = useSpaces();
 
   const isItemSaved = useSavedStore((state) => state.isItemSaved);
   const addItem = useSavedStore((state) => state.addItem);
   const removeItem = useSavedStore((state) => state.removeItem);
 
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(30)).current;
+
   const isSaved = space !== undefined && isItemSaved(space.id);
+
+  useEffect(() => {
+    if (space === undefined) {
+      return;
+    }
+
+    opacity.setValue(0);
+    translateY.setValue(30);
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [space, opacity, translateY]);
+
+  const floorStats = useMemo(() => {
+    if (space === undefined || catalog === undefined) {
+      return null;
+    }
+
+    const sameFloor = catalog.filter((item: Space) => item.floor === space.floor);
+    const available = sameFloor.filter((item: Space) => item.available).length;
+
+    return { total: sameFloor.length, available };
+  }, [catalog, space]);
 
   const handleToggleSave = (): void => {
     if (space === undefined) {
       return;
     }
+
     if (isSaved) {
       removeItem(space.id);
-    } else {
-      addItem(space);
+      return;
     }
+
+    addItem(space);
   };
 
   if (isLoading) {
@@ -60,16 +101,13 @@ export function DetailScreen(): React.JSX.Element {
         <Text style={styles.notFoundText}>
           Revisa tu conexión a internet y vuelve a intentarlo.
         </Text>
-        <Pressable
-          style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+        <AnimatedButton
+          label="Reintentar"
+          icon="refresh-outline"
           onPress={() => {
             void refetch();
           }}
-          accessibilityRole="button"
-        >
-          <Ionicons name="refresh-outline" size={18} color={COLORS.background} />
-          <Text style={styles.retryButtonText}>Reintentar</Text>
-        </Pressable>
+        />
       </View>
     );
   }
@@ -92,78 +130,77 @@ export function DetailScreen(): React.JSX.Element {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Image source={space.image} style={styles.hero} resizeMode="cover" />
+      <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+        <Image source={space.image} style={styles.hero} resizeMode="cover" />
 
-      <View style={styles.body}>
-        <View style={styles.badgeRow}>
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{SPACE_TYPE_LABEL[space.type]}</Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              space.available ? styles.statusAvailable : styles.statusBusy,
-            ]}
-          >
-            <Text
+        <View style={styles.body}>
+          <View style={styles.badgeRow}>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>{SPACE_TYPE_LABEL[space.type]}</Text>
+            </View>
+            <View
               style={[
-                styles.statusBadgeText,
-                space.available ? styles.statusTextAvailable : styles.statusTextBusy,
+                styles.statusBadge,
+                space.available ? styles.statusAvailable : styles.statusBusy,
               ]}
             >
-              {space.available ? 'Disponible' : 'Ocupado'}
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  space.available ? styles.statusTextAvailable : styles.statusTextBusy,
+                ]}
+              >
+                {space.available ? 'Disponible' : 'Ocupado'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.name}>{space.name}</Text>
+          <Text style={styles.description}>{space.description}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionTitle}>Ficha del espacio</Text>
+
+          <View style={styles.factRow}>
+            <Text style={styles.factLabel}>Piso</Text>
+            <Text style={styles.factValue}>Piso {space.floor}</Text>
+          </View>
+          <View style={styles.factRow}>
+            <Text style={styles.factLabel}>Capacidad</Text>
+            <Text style={styles.factValue}>{formatCapacity(space.capacity)}</Text>
+          </View>
+          <View style={styles.factRow}>
+            <Text style={styles.factLabel}>Precio por hora</Text>
+            <Text style={styles.factValuePrice}>{formatCOP(space.pricePerHour)}</Text>
+          </View>
+          <View style={styles.factRow}>
+            <Text style={styles.factLabel}>Estado</Text>
+            <Text style={styles.factValue}>
+              {space.available ? 'Disponible ahora' : 'Ocupado'}
             </Text>
           </View>
-        </View>
 
-        <Text style={styles.name}>{space.name}</Text>
-        <Text style={styles.description}>{space.description}</Text>
+          {floorStats !== null && (
+            <View style={styles.progressCard}>
+              <ProgressBar
+                value={floorStats.available / floorStats.total}
+                label={`Ocupación del piso ${space.floor}`}
+                caption={`${floorStats.available} de ${floorStats.total} espacios libres en este piso`}
+              />
+            </View>
+          )}
 
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionTitle}>Ficha del espacio</Text>
-
-        <View style={styles.factRow}>
-          <Text style={styles.factLabel}>Piso</Text>
-          <Text style={styles.factValue}>Piso {space.floor}</Text>
-        </View>
-        <View style={styles.factRow}>
-          <Text style={styles.factLabel}>Capacidad</Text>
-          <Text style={styles.factValue}>{formatCapacity(space.capacity)}</Text>
-        </View>
-        <View style={styles.factRow}>
-          <Text style={styles.factLabel}>Precio por hora</Text>
-          <Text style={styles.factValuePrice}>{formatCOP(space.pricePerHour)}</Text>
-        </View>
-        <View style={styles.factRow}>
-          <Text style={styles.factLabel}>Estado</Text>
-          <Text style={styles.factValue}>
-            {space.available ? 'Disponible ahora' : 'Ocupado'}
-          </Text>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.saveButton,
-            isSaved && styles.saveButtonActive,
-            pressed && styles.saveButtonPressed,
-          ]}
-          onPress={handleToggleSave}
-          accessibilityRole="button"
-          testID="save-button"
-        >
-          <Ionicons
-            name="bookmark-outline"
-            size={18}
-            color={isSaved ? COLORS.background : COLORS.textPrimary}
+          <AnimatedButton
+            label={isSaved ? 'Guardado' : 'Guardar espacio'}
+            icon={isSaved ? 'bookmark' : 'bookmark-outline'}
+            variant={isSaved ? 'primary' : 'outline'}
+            onPress={handleToggleSave}
+            testID="save-button"
+            style={styles.saveButton}
           />
-          <Text
-            style={[styles.saveButtonText, isSaved && styles.saveButtonTextActive]}
-          >
-            {isSaved ? 'Guardado' : 'Guardar'}
-          </Text>
-        </Pressable>
-      </View>
+        </View>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -271,32 +308,16 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weight.semibold,
     color: COLORS.success,
   },
-  saveButton: {
-    marginTop: SPACING.xl,
-    paddingVertical: SPACING.base,
+  progressCard: {
+    marginTop: SPACING.lg,
+    padding: SPACING.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
   },
-  saveButtonActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-  saveButtonPressed: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    fontSize: TYPOGRAPHY.size.base,
-    fontWeight: TYPOGRAPHY.weight.semibold,
-    color: COLORS.textPrimary,
-  },
-  saveButtonTextActive: {
-    color: COLORS.background,
+  saveButton: {
+    marginTop: SPACING.xl,
   },
   notFound: {
     flex: 1,
@@ -305,24 +326,6 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     gap: SPACING.sm,
     backgroundColor: COLORS.background,
-  },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.accent,
-  },
-  retryButtonPressed: {
-    opacity: 0.75,
-  },
-  retryButtonText: {
-    fontSize: TYPOGRAPHY.size.sm,
-    fontWeight: TYPOGRAPHY.weight.semibold,
-    color: COLORS.background,
   },
   notFoundTitle: {
     fontSize: TYPOGRAPHY.size.lg,
