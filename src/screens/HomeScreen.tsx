@@ -1,26 +1,72 @@
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  TextInput,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
+  type ListRenderItem,
 } from 'react-native';
 
 import { ItemCard } from '../components/ItemCard';
 import { MOCK_SPACES } from '../data/mockData';
-import type { Space } from '../types';
+import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
+import { SPACE_TYPE_LABEL, type Space } from '../types';
 
 export function HomeScreen(): React.JSX.Element {
-  function handleSpacePress(space: Space): void {
+  const [query, setQuery] = useState('');
+
+  const handleSpacePress = useCallback((space: Space): void => {
     console.log('Espacio seleccionado:', space.name);
-  }
+  }, []);
+
+  const filteredSpaces = useMemo((): Space[] => {
+    const term = query.trim().toLowerCase();
+    if (term === '') {
+      return MOCK_SPACES;
+    }
+
+    return MOCK_SPACES.filter((space) => {
+      const searchable = [
+        space.name,
+        space.description,
+        SPACE_TYPE_LABEL[space.type],
+        `piso ${space.floor}`,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(term);
+    });
+  }, [query]);
+
+  const renderItem: ListRenderItem<Space> = useCallback(
+    ({ item }) => <ItemCard item={item} onPress={handleSpacePress} />,
+    [handleSpacePress],
+  );
+
+  const renderSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
+
+  const renderEmpty = useCallback(
+    () => (
+      <View style={styles.empty}>
+        <Text style={styles.emptyTitle}>Sin resultados</Text>
+        <Text style={styles.emptyText}>
+          No encontramos espacios para “{query.trim()}”. Prueba con otro nombre,
+          tipo de espacio o piso.
+        </Text>
+      </View>
+    ),
+    [query],
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0d1117" />
-
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Nido Coworking</Text>
         <Text style={styles.headerSubtitle}>
@@ -28,44 +74,111 @@ export function HomeScreen(): React.JSX.Element {
         </Text>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.body}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {MOCK_SPACES.map((space) => (
-          <ItemCard key={space.id} item={space} onPress={handleSpacePress} />
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+        <View style={styles.searchWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar por nombre, tipo o piso…"
+            placeholderTextColor={COLORS.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Buscar espacios"
+          />
+          <Text style={styles.resultCount}>
+            {filteredSpaces.length} de {MOCK_SPACES.length} espacios
+          </Text>
+        </View>
+
+        <FlatList
+          data={filteredSpaces}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          ItemSeparatorComponent={renderSeparator}
+          ListEmptyComponent={renderEmpty}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#0d1117',
+    backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#30363d',
+    borderBottomColor: COLORS.border,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: TYPOGRAPHY.size.xxl,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: COLORS.textPrimary,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#8b949e',
-    marginTop: 4,
+    fontSize: TYPOGRAPHY.size.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
   },
-  scroll: {
+  body: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 16,
+  searchWrapper: {
+    paddingHorizontal: SPACING.base,
+    paddingTop: SPACING.base,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    fontSize: TYPOGRAPHY.size.base,
+    color: COLORS.textPrimary,
+  },
+  resultCount: {
+    fontSize: TYPOGRAPHY.size.xs,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  list: {
+    padding: SPACING.base,
+    flexGrow: 1,
+  },
+  separator: {
+    height: SPACING.md,
+  },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  emptyTitle: {
+    fontSize: TYPOGRAPHY.size.lg,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.textSecondary,
+  },
+  emptyText: {
+    fontSize: TYPOGRAPHY.size.sm,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

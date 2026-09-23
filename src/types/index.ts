@@ -16,6 +16,7 @@ export interface Space {
   floor: number;
   capacity: number;
   pricePerHour: number;
+  available: boolean;
   image: ImageSourcePropType;
 }
 

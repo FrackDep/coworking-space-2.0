@@ -1,57 +1,63 @@
-# Semana 01 — Core Components y Flexbox
+# Semana 02 — Listas, Inputs y Estilos
 
 Proyecto del dominio **coworking space**: **Nido Coworking**, la app de un edificio
 de coworking de 5 pisos en Bogotá, con 6 tipos de espacio y precios en COP.
 
-Esta es la rama **`semana-01`**: el punto de partida del proyecto, con el
-código en la **raíz** del repositorio (sin subcarpetas por semana).
+Esta es la rama **`semana-02`**: contiene el proyecto completo hasta esta
+semana, con el código en la **raíz** del repositorio. Parte de lo que dejó
+`semana-01` y le suma lo de esta semana, así que la historia de la rama son
+los 2 commits de las semanas 01 a 02.
 
 ## Qué pide el bootcamp
 
 1. App funcional en simulador iOS y/o Android
-2. Mínimo 3 tarjetas con datos del dominio
-3. Código subido al repositorio con el nombre del dominio en el `app.json`
-4. Screenshot o grabación de la app
+2. Al menos 10 items del dominio asignado en `mockData.ts`
+3. Búsqueda funcionando en tiempo real
+4. `README.md` en la raíz de tu entrega con: descripción del dominio, captura de
+   pantalla (o descripción de las pantallas) y decisiones de diseño tomadas
 
-**Restricciones de la semana:** nada de `position: 'absolute'` (solo Flexbox),
-ninguna librería de UI externa y ningún `style={{ ... }}` en el JSX.
+**Criterios de la rúbrica:** `keyExtractor` por id, `useMemo`, `useCallback`,
+`ItemSeparatorComponent`, `KeyboardAvoidingView`, constantes de tema y ningún
+`any`.
 
 ## Qué implementé
 
-- **Proyecto base** con Expo SDK 57, React Native 0.86 y TypeScript estricto, con
-  el entry point corregido (`index.js` + `registerRootComponent`). Los starters
-  del bootcamp traen `"main": "expo/AppEntry"` y `"sdkVersion": "53.0.0"`, que en
-  el SDK 57 dejan la app en pantalla blanca.
-- **Dominio definido:** 6 tipos de espacio (escritorio flexible, escritorio
-  dedicado, sala de juntas, oficina privada, cabina fónica y sala de eventos) con
-  precios por hora en pesos colombianos.
-- **Modelo tipado** `Space` (id, nombre, tipo, descripción, piso, capacidad,
-  precio por hora, disponibilidad e imagen) y 4 espacios de ejemplo con fotos
-  locales en `assets/spaces/`.
-- **`HomeScreen`** con header del dominio y el listado de tarjetas dentro de un
-  `ScrollView`.
-- **`ItemCard`** por tarjeta: imagen, dos textos con estilos distintos (nombre y
-  descripción) y una acción `Pressable` con feedback visual al pulsar.
-- Todo el estilado con `StyleSheet.create` y Flexbox: sin `position: 'absolute'`,
-  sin librerías de UI y sin estilos inline, como pide la semana.
-- `app.json` con `"name": "coworking-space"`.
+- **Catálogo de 12 espacios** (2 por cada tipo del dominio) con descripción,
+  piso, capacidad, precio por hora y badge de disponibilidad.
+- **Búsqueda en tiempo real** con `TextInput` y `useMemo`: filtra por nombre,
+  tipo de espacio, descripción y piso, sin recalcular en cada render.
+- **Estado vacío** cuando la búsqueda no encuentra nada, mostrando el término
+  buscado. Es texto, sin íconos: los Ionicons llegan en la semana 03.
+- **`FlatList` virtualizada** con `keyExtractor` por id, `useCallback` en
+  `renderItem` y en el estado vacío, y `ItemSeparatorComponent` entre tarjetas.
+- **`KeyboardAvoidingView`** para que el teclado no tape la lista.
+- **Sistema de tema centralizado** en `src/theme` (COLORS, TYPOGRAPHY, SPACING,
+  RADIUS): todos los `StyleSheet` leen de ahí, sin colores ni medidas sueltas.
+- **Corrección de compilación:** la prop `backgroundColor` de `expo-status-bar`
+  ya no existe en el SDK 57 y rompía el archivo del starter; aquí se omite.
+
+## Decisiones de diseño
+
+| Decisión | Por qué |
+| --- | --- |
+| Buscar también por piso y tipo, no solo por nombre | En un edificio de 5 pisos la gente busca "piso 3" o "cabina", no el nombre exacto de la sala |
+| Badge *Disponible / Ocupado* visible en la tarjeta | Es la información que más se consulta al reservar |
+| Tema centralizado en lugar de estilos sueltos | Evita repetir colores y permite cambiar el aspecto en un solo archivo |
 
 ## Estructura de esta semana
 
 ```
-semana-01/  (raíz del repositorio)
+semana-02/  (raíz del repositorio)
 ├── App.tsx                      Componente raíz
 ├── index.js                     Registro del componente raíz
-├── app.json                     Configuración de Expo (nombre del dominio)
+├── app.json                     Configuración de Expo
 ├── package.json                 Dependencias de la semana
-├── pnpm-lock.yaml               Versiones fijadas
-├── tsconfig.json                TypeScript estricto
-├── expo-env.d.ts                Tipos del entorno Expo/Metro
 ├── assets/spaces/               Fotos locales de los 6 tipos de espacio
 └── src/
-    ├── components/ItemCard.tsx  Tarjeta del espacio
-    ├── data/mockData.ts         Cuatro espacios de ejemplo
-    ├── screens/HomeScreen.tsx   Pantalla única con el catálogo
+    ├── components/ItemCard.tsx  Tarjeta del espacio con badge
+    ├── data/mockData.ts         12 espacios del edificio
+    ├── screens/HomeScreen.tsx   Buscador + FlatList + estados
+    ├── theme/index.ts           COLORS · TYPOGRAPHY · SPACING · RADIUS
     ├── types/index.ts           Modelo Space y tipos de espacio
     └── utils/format.ts          Formato de precios COP y capacidad
 ```
@@ -61,21 +67,20 @@ semana-01/  (raíz del repositorio)
 Desde tu copia del repositorio (mira la portada si aún no la tienes):
 
 ```bash
-git checkout semana-01
+git checkout semana-02
 pnpm install
 pnpm start
 ```
 
-Las 9 ramas están encadenadas: `semana-01` es la base y `semana-09` es la app
-completa. Al cambiar de rama, vuelve a ejecutar `pnpm install`, porque cada
-semana puede traer dependencias nuevas.
+Al cambiar de rama vuelve a ejecutar `pnpm install`: cada semana puede traer
+dependencias nuevas.
 
 ## Verificación
 
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm exec tsc --noEmit` | 0 errores |
-| `expo export --platform android` | 586 módulos |
+| `expo export --platform android` | 591 módulos |
 
 ## Ejecutar en web
 
@@ -97,13 +102,14 @@ pnpm exec expo export --platform web
 
 | Archivo | Pantalla | Cómo llegar |
 | --- | --- | --- |
-| `01-home-tarjetas.png` | Catálogo con las tarjetas | Abrir la app |
+| `02-busqueda.png` | Buscador filtrando | Escribir `sala` en el buscador |
+| `02-estado-vacio.png` | Estado vacío | Escribir `zzz` en el buscador |
 
 Las capturas de esta entrega van en
 [`capturas/`](capturas/), dentro de esta rama.
 
 ## Rama y commit de esta semana
 
-Rama **`semana-01`** (una de las 9 ramas encadenadas del repositorio), con el commit:
+Rama **`semana-02`** (una de las 9 ramas encadenadas del repositorio), con el commit:
 
-`Semana 01 — Core Components y Flexbox`
+`Semana 02 — Listas, Inputs y Estilos`

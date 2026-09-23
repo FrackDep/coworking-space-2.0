@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { SPACE_TYPE_LABEL, type Space } from '../types';
+import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { formatCOP, formatCapacity } from '../utils/format';
 
 interface ItemCardProps {
@@ -26,7 +27,26 @@ export function ItemCard({ item, onPress }: ItemCardProps): React.JSX.Element {
       <Image source={item.image} style={styles.image} resizeMode="cover" />
 
       <View style={styles.body}>
-        <Text style={styles.type}>{SPACE_TYPE_LABEL[item.type]}</Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeBadgeText}>{SPACE_TYPE_LABEL[item.type]}</Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              item.available ? styles.statusAvailable : styles.statusBusy,
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                item.available ? styles.statusTextAvailable : styles.statusTextBusy,
+              ]}
+            >
+              {item.available ? 'Disponible' : 'Ocupado'}
+            </Text>
+          </View>
+        </View>
 
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.description} numberOfLines={2}>
@@ -47,60 +67,93 @@ export function ItemCard({ item, onPress }: ItemCardProps): React.JSX.Element {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#161b22',
-    borderRadius: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: '#30363d',
+    borderColor: COLORS.border,
     overflow: 'hidden',
   },
   cardPressed: {
-    backgroundColor: '#21262d',
-    borderColor: '#61DAFB',
+    backgroundColor: COLORS.surfaceAlt,
+    borderColor: COLORS.accent,
   },
   image: {
     width: '100%',
     height: 160,
   },
   body: {
-    padding: 16,
-    gap: 4,
+    padding: SPACING.base,
+    gap: SPACING.xs,
   },
-  type: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#61DAFB',
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  typeBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.accentDim,
+  },
+  typeBadgeText: {
+    fontSize: TYPOGRAPHY.size.xs,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.accent,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  statusBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+  },
+  statusAvailable: {
+    borderColor: COLORS.success,
+  },
+  statusBusy: {
+    borderColor: COLORS.error,
+  },
+  statusBadgeText: {
+    fontSize: TYPOGRAPHY.size.xs,
+    fontWeight: TYPOGRAPHY.weight.medium,
+  },
+  statusTextAvailable: {
+    color: COLORS.success,
+  },
+  statusTextBusy: {
+    color: COLORS.error,
+  },
   name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e6edf3',
+    fontSize: TYPOGRAPHY.size.md,
+    fontWeight: TYPOGRAPHY.weight.bold,
+    color: COLORS.textPrimary,
   },
   description: {
-    fontSize: 13,
-    color: '#8b949e',
+    fontSize: TYPOGRAPHY.size.sm,
+    color: COLORS.textSecondary,
     lineHeight: 18,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   meta: {
-    fontSize: 12,
-    color: '#6e7681',
+    fontSize: TYPOGRAPHY.size.xs,
+    color: COLORS.textMuted,
   },
   metaDot: {
-    fontSize: 12,
-    color: '#30363d',
+    fontSize: TYPOGRAPHY.size.xs,
+    color: COLORS.border,
   },
   price: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#3fb950',
-    marginTop: 8,
+    fontSize: TYPOGRAPHY.size.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.success,
+    marginTop: SPACING.xs,
   },
 });
