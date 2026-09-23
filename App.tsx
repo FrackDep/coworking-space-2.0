@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { useAuthStore } from './src/stores/authStore';
 import { hydrateFromAsyncStorage } from './src/storage/mmkv';
 
 const queryClient = new QueryClient({
@@ -19,7 +20,10 @@ const queryClient = new QueryClient({
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
-    void hydrateFromAsyncStorage();
+    void (async () => {
+      await hydrateFromAsyncStorage();
+      await useAuthStore.getState().restoreSession();
+    })();
   }, []);
 
   return (

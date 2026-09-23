@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { readSecret, saveSecret } from '../storage/secureStore';
 
 import { usePreferences, type SortOrder } from '../hooks/usePreferences';
+import { useAuthStore } from '../stores/authStore';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 
 const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
@@ -27,6 +29,9 @@ const ACCESS_CODE_KEY = 'nido.accessCode';
 type SecureStatus = 'idle' | 'saved' | 'found' | 'missing' | 'error';
 
 export function SettingsScreen(): React.JSX.Element {
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+
   const {
     sortOrder,
     compactMode,
@@ -39,6 +44,7 @@ export function SettingsScreen(): React.JSX.Element {
 
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<SecureStatus>('idle');
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   const handleSaveCode = async (): Promise<void> => {
     if (code.trim() === '') {
@@ -62,6 +68,15 @@ export function SettingsScreen(): React.JSX.Element {
     } catch (error) {
       setStatus('error');
     }
+  };
+
+  const handleLogout = (): void => {
+    setConfirmingLogout(true);
+  };
+
+  const confirmLogout = (): void => {
+    setConfirmingLogout(false);
+    void logout();
   };
 
   const secureMessage: Record<SecureStatus, string> = {
@@ -146,6 +161,33 @@ export function SettingsScreen(): React.JSX.Element {
 
       <View style={styles.divider} />
 
+      <Text style={styles.sectionTitle}>Sesión</Text>
+      <Text style={styles.sectionHint}>
+        Tu sesión viaja en tokens firmados que se guardan en el almacenamiento
+        seguro, aparte de las preferencias del catálogo.
+      </Text>
+
+      <View style={styles.sessionRow}>
+        <Ionicons name="person-outline" size={18} color={COLORS.accent} />
+        <Text style={styles.sessionText}>
+          {user === null
+            ? 'Sin sesión activa.'
+            : `${user.firstName} ${user.lastName} · ${user.email}`}
+        </Text>
+      </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.sessionButton, pressed && styles.buttonPressed]}
+        onPress={handleLogout}
+        accessibilityRole="button"
+        testID="settings-logout-button"
+      >
+        <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
+        <Text style={styles.sessionButtonText}>Cerrar sesión</Text>
+      </Pressable>
+
+      <View style={styles.divider} />
+
       <Text style={styles.sectionTitle}>Seguridad</Text>
       <Text style={styles.sectionHint}>
         Código de acceso del edificio para reservar salas. Se guarda en el
@@ -197,6 +239,15 @@ export function SettingsScreen(): React.JSX.Element {
         />
         <Text style={styles.statusText}>{secureMessage[status]}</Text>
       </View>
+      <ConfirmDialog
+        visible={confirmingLogout}
+        title="Cerrar sesión"
+        message="¿Quieres salir de tu cuenta de Nido Coworking?"
+        confirmLabel="Salir"
+        onConfirm={confirmLogout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
+
     </ScrollView>
   );
 }
@@ -233,6 +284,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.sm,
     marginTop: SPACING.sm,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  sessionText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.size.sm,
+    color: COLORS.textSecondary,
+  },
+  sessionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  sessionButtonText: {
+    fontSize: TYPOGRAPHY.size.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.error,
   },
   chip: {
     paddingHorizontal: SPACING.md,

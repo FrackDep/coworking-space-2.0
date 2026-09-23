@@ -1,0 +1,136 @@
+import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import { CreateScreen } from '../screens/CreateScreen';
+import { DetailScreen } from '../screens/DetailScreen';
+import { EditScreen } from '../screens/EditScreen';
+import { HomeScreen } from '../screens/HomeScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
+import { SavedScreen } from '../screens/SavedScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { useSavedStore } from '../stores/savedStore';
+import { COLORS } from '../theme';
+import type { HomeStackParamList, RootTabParamList } from './types';
+
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+
+function HomeStackNavigator(): React.JSX.Element {
+  return (
+    <HomeStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerTintColor: COLORS.accent,
+        headerTitleStyle: { fontWeight: 'bold' as const },
+        contentStyle: { backgroundColor: COLORS.background },
+      }}
+    >
+      <HomeStack.Screen
+        name="HomeList"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          title: 'Nido Coworking',
+          headerRight: () => (
+            <Pressable
+              onPress={() => navigation.navigate('HomeCreate')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Publicar un espacio"
+              testID="create-space-button"
+            >
+              <Ionicons name="add-outline" size={26} color={COLORS.accent} />
+            </Pressable>
+          ),
+        })}
+      />
+      <HomeStack.Screen
+        name="HomeDetail"
+        component={DetailScreen}
+        options={({ route, navigation }) => ({
+          title: route.params.name,
+          headerRight: () => (
+            <Pressable
+              onPress={() =>
+                navigation.navigate('HomeEdit', {
+                  id: route.params.id,
+                  name: route.params.name,
+                })
+              }
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Editar el espacio"
+              testID="edit-space-button"
+            >
+              <Ionicons name="create-outline" size={24} color={COLORS.accent} />
+            </Pressable>
+          ),
+        })}
+      />
+      <HomeStack.Screen
+        name="HomeCreate"
+        component={CreateScreen}
+        options={{ title: 'Publicar espacio' }}
+      />
+      <HomeStack.Screen
+        name="HomeEdit"
+        component={EditScreen}
+        options={{ title: 'Editar espacio' }}
+      />
+    </HomeStack.Navigator>
+  );
+}
+
+const Tab = createBottomTabNavigator<RootTabParamList>();
+
+export function AppNavigator(): React.JSX.Element {
+  const savedCount = useSavedStore((state) => state.items.length);
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.accent,
+        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopColor: COLORS.border,
+        },
+        tabBarIcon: ({ color, size }) => {
+          const icons: Record<keyof RootTabParamList, keyof typeof Ionicons.glyphMap> = {
+            Home: 'business-outline',
+            Saved: 'bookmark-outline',
+            Profile: 'person-outline',
+            Settings: 'settings-outline',
+          };
+
+          return <Ionicons name={icons[route.name]} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeStackNavigator}
+        options={{ tabBarLabel: 'Espacios' }}
+      />
+      <Tab.Screen
+        name="Saved"
+        component={SavedScreen}
+        options={{
+          tabBarLabel: 'Guardados',
+          tabBarBadge: savedCount > 0 ? savedCount : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarLabel: 'Mi cuenta' }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Ajustes' }}
+      />
+    </Tab.Navigator>
+  );
+}

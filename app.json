@@ -16,6 +16,7 @@
       "bundler": "metro",
       "output": "single"
     },
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "scheme": "coworking-space"
   }
 }
