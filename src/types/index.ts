@@ -44,3 +44,7 @@ export interface CreateSpacePayload {
   pricePerHour: number;
   type: SpaceType;
 }
+
+export interface UpdateSpacePayload extends CreateSpacePayload {
+  id: string;
+}

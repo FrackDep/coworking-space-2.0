@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiClient } from '../services/api';
-import type { CreateSpacePayload, Space, SpacePost } from '../types';
+import type {
+  CreateSpacePayload,
+  Space,
+  SpacePost,
+  UpdateSpacePayload,
+} from '../types';
 import { toPost, toSpace } from '../utils/spaceMapper';
 
 export const SPACES_QUERY_KEY = ['spaces'] as const;
@@ -42,6 +47,29 @@ export function useCreateSpace() {
     },
     onError: (error) => {
       console.error('No se pudo crear el espacio:', error.message);
+    },
+  });
+}
+
+export function useUpdateSpace() {
+  const queryClient = useQueryClient();
+
+  return useMutation<SpacePost, Error, UpdateSpacePayload>({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.put<SpacePost>(
+        `/posts/${payload.id}`,
+        toPost(payload),
+      );
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: SPACES_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: [...SPACES_QUERY_KEY, variables.id],
+      });
+    },
+    onError: (error) => {
+      console.error('No se pudo actualizar el espacio:', error.message);
     },
   });
 }

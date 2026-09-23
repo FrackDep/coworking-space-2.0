@@ -1,94 +1,99 @@
-# Semana 05 — Networking y TanStack Query v5
+# Semana 06 — Formularios con React Hook Form + Zod
 
 Proyecto del dominio **coworking space**: **Nido Coworking**, la app de un edificio
 de coworking de 5 pisos en Bogotá, con 6 tipos de espacio y precios en COP.
 
-Esta es la rama **`semana-05`**: contiene el proyecto completo hasta esta
+Esta es la rama **`semana-06`**: contiene el proyecto completo hasta esta
 semana, con el código en la **raíz** del repositorio. Parte de lo que dejó
-`semana-04` y le suma lo de esta semana, así que la historia de la rama son
-los 5 commits de las semanas 01 a 05.
+`semana-05` y le suma lo de esta semana, así que la historia de la rama son
+los 6 commits de las semanas 01 a 06.
 
 ## Qué pide el bootcamp
 
-1. `useQuery` consumiendo al menos un endpoint real del dominio
-2. `useMutation` con `invalidateQueries` en `onSuccess`
-3. Manejo de loading, error y empty states en `HomeScreen`
-4. Pull-to-refresh funcional
-5. README con descripción del dominio, API usada y capturas de pantalla
+1. **`FormField` genérico:** un componente que encapsule `Controller` +
+   `TextInput` + mensaje de error, reutilizado en Create y Edit
+2. **`CreateScreen`:** formulario con al menos 2 campos, validación Zod y la
+   mutación de TanStack Query, con navegación atrás en `onSuccess`
+3. **`EditScreen`:** el mismo formulario con `defaultValues` cargados del
+   servidor y `reset()` cuando llegan los datos
+4. **Validación activa:** errores visibles bajo cada campo al intentar enviar
+5. **Estado de carga:** botón deshabilitado y spinner durante el envío
 
 ## Qué implementé
 
-- **`src/services/api.ts`:** instancia de Axios con `baseURL` configurable por la
-  variable de entorno `EXPO_PUBLIC_API_URL`, `timeout` de 10 s, cabeceras JSON e
-  interceptor de respuesta que registra los errores de red.
-- **Hooks de datos** en `src/hooks/useSpaces.ts`: `useSpaces` (lista),
-  `useSpaceById` (detalle, con `enabled`) y `useCreateSpace` (`useMutation` que
-  invalida la query de la lista en `onSuccess`).
-- **`src/utils/spaceMapper.ts`:** traduce cada respuesta de la API a un `Space`
-  del dominio. El `id` decide el tipo de espacio y la sala, y de ahí salen piso,
-  capacidad, precio en COP y disponibilidad.
-- **`HomeScreen` con los cuatro estados de red:** `ActivityIndicator` mientras
-  carga, mensaje de error con botón *Reintentar*, estado vacío diferenciado (sin
-  espacios publicados vs. sin resultados de búsqueda) y pull-to-refresh con
-  `onRefresh={refetch}` y `refreshing={isFetching}`.
-- **`DetailScreen`** que pide el espacio a la API por id, con su propio estado de
-  carga y de error.
-- **`CreateScreen`** con un formulario que envía un `POST` y vuelve atrás cuando
-  la mutación termina bien.
-- **`QueryClientProvider`** en `App.tsx` con `staleTime` de 2 minutos, `retry: 2`
-  y sin `refetchOnWindowFocus`.
-- **Se elimina `mockData`:** el catálogo ya no vive en el celular, se pide por red.
+- **`src/schemas/spaceSchema.ts`:** esquema Zod con las reglas del dominio y el
+  tipo inferido con `z.infer`, sin ninguna interfaz duplicada.
 
-## La API
+  | Campo | Regla |
+  | --- | --- |
+  | `name` | texto de 3 a 80 caracteres |
+  | `description` | texto de 10 a 500 caracteres |
+  | `type` | uno de los 6 tipos de espacio del edificio |
+  | `floor` | entero de 1 a 10 (`z.coerce.number()`) |
+  | `capacity` | entero de 1 a 40 personas |
+  | `pricePerHour` | mayor que 0 y máximo $ 500.000 COP |
 
-[JSONPlaceholder](https://jsonplaceholder.typicode.com), el servicio de práctica
-que sugiere el bootcamp. Responde `{ id, userId, title, body }`.
+- **`FormField` genérico** (`src/components/FormField.tsx`): encapsula
+  `Controller` + `TextInput` + el mensaje de error, tipado con los genéricos de
+  React Hook Form (`Control`, `FieldPath`) y reutilizado en las dos pantallas.
+- **`CreateScreen`** validado con `zodResolver`: solo publica si el formulario es
+  válido y vuelve atrás cuando la mutación termina bien.
+- **`EditScreen`** con `defaultValues` del espacio que llega del servidor,
+  `reset()` cuando los datos están listos y `isDirty` para habilitar el botón
+  únicamente si hay cambios. Se llega desde el botón de lápiz del header del
+  detalle.
+- **`useUpdateSpace`** con `invalidateQueries` de la lista y del detalle.
+- Spinner (`ActivityIndicator`) y botón deshabilitado mientras `isPending`.
 
-| Operación | Endpoint | Hook |
-| --- | --- | --- |
-| Listar espacios | `GET /posts?_limit=20` | `useSpaces()` |
-| Ver un espacio | `GET /posts/:id` | `useSpaceById(id)` |
-| Publicar un espacio | `POST /posts` | `useCreateSpace()` |
+## Nota técnica: la versión del resolver
 
-El `POST` responde con un objeto simulado (id 101 y siguientes), que es el
-comportamiento esperado de esa API de práctica: no guarda de verdad. Para apuntar
-a una API propia basta con definir `EXPO_PUBLIC_API_URL`.
+El starter de esta semana trae `@hookform/resolvers@5.4.0` junto a `zod@4.4.3`, y
+**esas dos versiones no son compatibles a nivel de tipos**: el resolver espera la
+verificación de Zod de la versión 3 y TypeScript rechaza el `useForm` completo.
+Aquí se usa `@hookform/resolvers@5.9.1`, que sí soporta Zod 4, y el `useForm` se
+tipa con `z.input` y `z.output` (`useForm<SpaceFormInput, unknown, SpaceFormData>`)
+porque los campos con `z.coerce` entran como texto y salen como número.
 
 ## Verificación
 
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm exec tsc --noEmit` | 0 errores |
-| `expo export --platform android` | 982 módulos |
-| Mapeo probado con las 20 respuestas reales del endpoint | 20 espacios, 6 tipos, 5 pisos, ids únicos |
-| Contrato de la API comprobado | `GET /posts?_limit=20` → 20 elementos · `POST /posts` → id 101 |
+| `expo export --platform android` | 1068 módulos |
+| Casos de validación ejecutados contra el esquema compilado | 15 casos: 2 válidos aceptados y 13 inválidos rechazados con su mensaje |
+
+Los casos inválidos cubiertos fueron: nombre corto, descripción corta, piso 0,
+piso 11, piso vacío, piso no numérico, capacidad 0, capacidad 41, precio 0,
+precio negativo, precio por encima del máximo, tipo inexistente y tipo ausente.
 
 ## Estructura de esta semana
 
 ```
-semana-05/  (raíz del repositorio)
+semana-06/  (raíz del repositorio)
 ├── App.tsx                        QueryClientProvider + NavigationContainer
 ├── index.js                       Registro del componente raíz
 ├── app.json                       Configuración de Expo
-├── package.json                   Dependencias (Axios + TanStack Query)
+├── package.json                   Dependencias (RHF + Zod + resolvers)
 └── src/
-    ├── components/ItemCard.tsx    Tarjeta que navega al detalle
-    ├── hooks/useSpaces.ts         useQuery / useSpaceById / useCreateSpace
+    ├── components/
+    │   ├── FormField.tsx          Controller + TextInput + error (reutilizable)
+    │   └── ItemCard.tsx           Tarjeta que navega al detalle
+    ├── hooks/useSpaces.ts         useSpaces · useSpaceById · useCreate/UpdateSpace
     ├── navigation/
-    │   ├── RootNavigator.tsx      Tab + Stack (ahora con HomeCreate)
+    │   ├── RootNavigator.tsx      Tab + Stack (Home, Detail, Create, Edit)
     │   └── types.ts               Listas de params tipadas
+    ├── schemas/spaceSchema.ts     Reglas Zod + tipos inferidos
     ├── screens/
-    │   ├── HomeScreen.tsx         Lista con estados de red y refresh
-    │   ├── DetailScreen.tsx       Detalle desde la API
-    │   ├── CreateScreen.tsx       Formulario que hace POST
-    │   └── SavedScreen.tsx        Guardados (Zustand, semana 04)
+    │   ├── HomeScreen.tsx         Lista con estados de red
+    │   ├── DetailScreen.tsx       Detalle + botón de editar en el header
+    │   ├── CreateScreen.tsx       Formulario de creación validado
+    │   ├── EditScreen.tsx         Formulario de edición con reset()
+    │   └── SavedScreen.tsx        Guardados (Zustand)
     ├── services/api.ts            Instancia de Axios
     ├── stores/savedStore.ts       Estado global (Zustand)
     ├── theme/index.ts             COLORS · TYPOGRAPHY · SPACING · RADIUS
-    ├── types/index.ts             Space · SpacePost · CreateSpacePayload
-    └── utils/
-        ├── format.ts              Precios COP y capacidad
-        └── spaceMapper.ts         API → dominio
+    ├── types/index.ts             Space · payloads de crear y actualizar
+    └── utils/                     format · spaceMapper
 ```
 
 ## Cómo ejecutar
@@ -96,7 +101,7 @@ semana-05/  (raíz del repositorio)
 Desde tu copia del repositorio (mira la portada si aún no la tienes):
 
 ```bash
-git checkout semana-05
+git checkout semana-06
 pnpm install
 pnpm start
 ```
@@ -104,9 +109,8 @@ pnpm start
 Al cambiar de rama vuelve a ejecutar `pnpm install`: cada semana puede traer
 dependencias nuevas.
 
-Esta semana **necesita internet**: el catálogo se carga desde la API. Si el
-teléfono no tiene red, verás el estado de error con el botón *Reintentar* (la
-caché offline llega en la semana 07).
+Necesita internet, igual que la semana 05: el catálogo y los datos del formulario
+de edición vienen de la API.
 
 ## Ejecutar en web
 
@@ -128,14 +132,14 @@ pnpm exec expo export --platform web
 
 | Archivo | Pantalla | Cómo llegar |
 | --- | --- | --- |
-| `05-crear.png` | Formulario de publicación | Tocar el `+` del header |
-| `05-error.png` | Estado de error con *Reintentar* | Abrir la app sin internet |
+| `06-validacion.png` | Errores de Zod bajo los campos | Tocar *Publicar* con el formulario vacío |
+| `06-editar.png` | Edición con datos del servidor | Detalle → ícono de lápiz del header |
 
 Las capturas de esta entrega van en
 [`capturas/`](capturas/), dentro de esta rama.
 
 ## Rama y commit de esta semana
 
-Rama **`semana-05`** (una de las 9 ramas encadenadas del repositorio), con el commit:
+Rama **`semana-06`** (una de las 9 ramas encadenadas del repositorio), con el commit:
 
-`Semana 05 — Networking y TanStack Query`
+`Semana 06 — Formularios con React Hook Form + Zod`

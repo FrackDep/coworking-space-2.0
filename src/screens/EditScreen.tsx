@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { FormField } from '../components/FormField';
-import { useCreateSpace } from '../hooks/useSpaces';
+import { useSpaceById, useUpdateSpace } from '../hooks/useSpaces';
 import {
   spaceSchema,
   type SpaceFormData,
@@ -26,10 +26,11 @@ import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type SpaceType } from '../types';
 import type { HomeStackParamList } from '../navigation/types';
 
-type CreateScreenNavigationProp = NativeStackNavigationProp<
+type EditScreenNavigationProp = NativeStackNavigationProp<
   HomeStackParamList,
-  'HomeCreate'
+  'HomeEdit'
 >;
+type EditRouteProp = RouteProp<HomeStackParamList, 'HomeEdit'>;
 
 const SPACE_TYPES: SpaceType[] = [
   'escritorio-flexible',
@@ -40,14 +41,19 @@ const SPACE_TYPES: SpaceType[] = [
   'sala-eventos',
 ];
 
-export function CreateScreen(): React.JSX.Element {
-  const navigation = useNavigation<CreateScreenNavigationProp>();
-  const { mutate, isPending, isError, error } = useCreateSpace();
+export function EditScreen(): React.JSX.Element {
+  const navigation = useNavigation<EditScreenNavigationProp>();
+  const route = useRoute<EditRouteProp>();
+  const { id } = route.params;
+
+  const { data: space, isLoading } = useSpaceById(id);
+  const { mutate, isPending, isError, error } = useUpdateSpace();
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isDirty },
   } = useForm<SpaceFormInput, unknown, SpaceFormData>({
     resolver: zodResolver(spaceSchema),
     defaultValues: {
@@ -60,13 +66,40 @@ export function CreateScreen(): React.JSX.Element {
     },
   });
 
-  const onSubmit = (data: SpaceFormData): void => {
-    mutate(data, {
-      onSuccess: () => {
-        navigation.goBack();
-      },
+  useEffect(() => {
+    if (space === undefined) {
+      return;
+    }
+
+    reset({
+      name: space.name,
+      description: space.description,
+      type: space.type,
+      floor: space.floor,
+      capacity: space.capacity,
+      pricePerHour: space.pricePerHour,
     });
+  }, [space, reset]);
+
+  const onSubmit = (data: SpaceFormData): void => {
+    mutate(
+      { ...data, id },
+      {
+        onSuccess: () => {
+          navigation.goBack();
+        },
+      },
+    );
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.state}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={styles.stateText}>Cargando el espacio…</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -82,7 +115,6 @@ export function CreateScreen(): React.JSX.Element {
           control={control}
           name="name"
           label="Nombre del espacio"
-          placeholder="Ej. Sala de juntas · Aurora"
           errorMessage={errors.name?.message}
           accessibilityLabel="Nombre del espacio"
         />
@@ -91,7 +123,6 @@ export function CreateScreen(): React.JSX.Element {
           control={control}
           name="description"
           label="Descripción"
-          placeholder="Qué incluye el espacio y para qué sirve"
           errorMessage={errors.description?.message}
           multiline
           numberOfLines={3}
@@ -138,7 +169,6 @@ export function CreateScreen(): React.JSX.Element {
               control={control}
               name="floor"
               label="Piso"
-              placeholder="3"
               keyboardType="number-pad"
               errorMessage={errors.floor?.message}
               accessibilityLabel="Piso"
@@ -149,7 +179,6 @@ export function CreateScreen(): React.JSX.Element {
               control={control}
               name="capacity"
               label="Capacidad"
-              placeholder="8"
               keyboardType="number-pad"
               errorMessage={errors.capacity?.message}
               accessibilityLabel="Capacidad"
@@ -161,7 +190,6 @@ export function CreateScreen(): React.JSX.Element {
           control={control}
           name="pricePerHour"
           label="Precio por hora (COP)"
-          placeholder="45000"
           keyboardType="number-pad"
           errorMessage={errors.pricePerHour?.message}
           accessibilityLabel="Precio por hora"
@@ -171,7 +199,7 @@ export function CreateScreen(): React.JSX.Element {
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
             <Text style={styles.errorText}>
-              No se pudo crear el espacio: {error.message}
+              No se pudo guardar el cambio: {error.message}
             </Text>
           </View>
         )}
@@ -179,27 +207,28 @@ export function CreateScreen(): React.JSX.Element {
         <Pressable
           style={({ pressed }) => [
             styles.submitButton,
+            !isDirty && styles.submitButtonDisabled,
             pressed && styles.submitButtonPressed,
           ]}
           onPress={handleSubmit(onSubmit)}
-          disabled={isPending}
+          disabled={isPending || !isDirty}
           accessibilityRole="button"
-          accessibilityState={{ disabled: isPending }}
-          testID="create-submit"
+          accessibilityState={{ disabled: isPending || !isDirty }}
+          testID="edit-submit"
         >
           {isPending ? (
             <ActivityIndicator size="small" color={COLORS.background} />
           ) : (
-            <Ionicons name="add-outline" size={20} color={COLORS.background} />
+            <Ionicons name="checkmark-outline" size={20} color={COLORS.background} />
           )}
           <Text style={styles.submitButtonText}>
-            {isPending ? 'Guardando…' : 'Publicar espacio'}
+            {isPending ? 'Guardando…' : 'Guardar cambios'}
           </Text>
         </Pressable>
 
         <Text style={styles.hint}>
-          El formulario valida con Zod antes de enviar y publica con un POST. El
-          catálogo se refresca solo al volver.
+          Los valores iniciales vienen del servidor y se cargan con reset(). El
+          botón se activa solo cuando cambias algún campo.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -214,6 +243,17 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.base,
     paddingBottom: SPACING.xxl,
+  },
+  state: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.background,
+  },
+  stateText: {
+    fontSize: TYPOGRAPHY.size.sm,
+    color: COLORS.textMuted,
   },
   multiline: {
     minHeight: 88,
@@ -289,6 +329,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.accent,
+  },
+  submitButtonDisabled: {
+    opacity: 0.5,
   },
   submitButtonPressed: {
     opacity: 0.75,

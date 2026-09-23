@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { CreateScreen } from '../screens/CreateScreen';
 import { DetailScreen } from '../screens/DetailScreen';
+import { EditScreen } from '../screens/EditScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { SavedScreen } from '../screens/SavedScreen';
 import { useSavedStore } from '../stores/savedStore';
@@ -44,12 +45,35 @@ function HomeStackNavigator(): React.JSX.Element {
       <HomeStack.Screen
         name="HomeDetail"
         component={DetailScreen}
-        options={({ route }) => ({ title: route.params.name })}
+        options={({ route, navigation }) => ({
+          title: route.params.name,
+          headerRight: () => (
+            <Pressable
+              onPress={() =>
+                navigation.navigate('HomeEdit', {
+                  id: route.params.id,
+                  name: route.params.name,
+                })
+              }
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Editar el espacio"
+              testID="edit-space-button"
+            >
+              <Ionicons name="create-outline" size={24} color={COLORS.accent} />
+            </Pressable>
+          ),
+        })}
       />
       <HomeStack.Screen
         name="HomeCreate"
         component={CreateScreen}
         options={{ title: 'Publicar espacio' }}
+      />
+      <HomeStack.Screen
+        name="HomeEdit"
+        component={EditScreen}
+        options={{ title: 'Editar espacio' }}
       />
     </HomeStack.Navigator>
   );
