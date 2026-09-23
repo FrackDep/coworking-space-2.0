@@ -28,3 +28,19 @@ export const SPACE_TYPE_LABEL: Record<SpaceType, string> = {
   'cabina-fonica': 'Cabina fónica',
   'sala-eventos': 'Sala de eventos',
 };
+
+export interface SpacePost {
+  userId: number;
+  id: number;
+  title: string;
+  body: string;
+}
+
+export interface CreateSpacePayload {
+  name: string;
+  description: string;
+  floor: number;
+  capacity: number;
+  pricePerHour: number;
+  type: SpaceType;
+}

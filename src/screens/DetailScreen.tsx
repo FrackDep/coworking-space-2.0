@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -10,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 
-import { MOCK_SPACES } from '../data/mockData';
+import { useSpaceById } from '../hooks/useSpaces';
 import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL } from '../types';
@@ -23,7 +24,7 @@ export function DetailScreen(): React.JSX.Element {
   const route = useRoute<DetailRouteProp>();
   const { id } = route.params;
 
-  const space = MOCK_SPACES.find((item) => item.id === id);
+  const { data: space, isLoading, isError, refetch } = useSpaceById(id);
 
   const isItemSaved = useSavedStore((state) => state.isItemSaved);
   const addItem = useSavedStore((state) => state.addItem);
@@ -42,9 +43,41 @@ export function DetailScreen(): React.JSX.Element {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.notFound}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={styles.notFoundTitle}>Cargando el espacio…</Text>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.notFound}>
+        <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+        <Text style={styles.notFoundTitle}>No pudimos cargar el espacio</Text>
+        <Text style={styles.notFoundText}>
+          Revisa tu conexión a internet y vuelve a intentarlo.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+          onPress={() => {
+            void refetch();
+          }}
+          accessibilityRole="button"
+        >
+          <Ionicons name="refresh-outline" size={18} color={COLORS.background} />
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (space === undefined) {
     return (
       <View style={styles.notFound}>
+        <Ionicons name="folder-outline" size={48} color={COLORS.textMuted} />
         <Text style={styles.notFoundTitle}>Espacio no encontrado</Text>
         <Text style={styles.notFoundText}>
           No hay ningún espacio con el id “{id}” en el catálogo.
@@ -272,6 +305,24 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     gap: SPACING.sm,
     backgroundColor: COLORS.background,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.accent,
+  },
+  retryButtonPressed: {
+    opacity: 0.75,
+  },
+  retryButtonText: {
+    fontSize: TYPOGRAPHY.size.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.background,
   },
   notFoundTitle: {
     fontSize: TYPOGRAPHY.size.lg,

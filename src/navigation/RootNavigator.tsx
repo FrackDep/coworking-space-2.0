@@ -1,7 +1,9 @@
+import { Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
+import { CreateScreen } from '../screens/CreateScreen';
 import { DetailScreen } from '../screens/DetailScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { SavedScreen } from '../screens/SavedScreen';
@@ -24,12 +26,30 @@ function HomeStackNavigator(): React.JSX.Element {
       <HomeStack.Screen
         name="HomeList"
         component={HomeScreen}
-        options={{ title: 'Nido Coworking' }}
+        options={({ navigation }) => ({
+          title: 'Nido Coworking',
+          headerRight: () => (
+            <Pressable
+              onPress={() => navigation.navigate('HomeCreate')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Publicar un espacio"
+              testID="create-space-button"
+            >
+              <Ionicons name="add-outline" size={26} color={COLORS.accent} />
+            </Pressable>
+          ),
+        })}
       />
       <HomeStack.Screen
         name="HomeDetail"
         component={DetailScreen}
         options={({ route }) => ({ title: route.params.name })}
+      />
+      <HomeStack.Screen
+        name="HomeCreate"
+        component={CreateScreen}
+        options={{ title: 'Publicar espacio' }}
       />
     </HomeStack.Navigator>
   );

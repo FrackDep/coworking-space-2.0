@@ -1,12 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
+  Text,
+  TextInput,
+  View,
   type ListRenderItem,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ItemCard } from '../components/ItemCard';
-import { MOCK_SPACES } from '../data/mockData';
+import { useSpaces } from '../hooks/useSpaces';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type Space } from '../types';
 import type { HomeStackParamList } from '../navigation/types';
@@ -27,6 +29,9 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 export function HomeScreen(): React.JSX.Element {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [query, setQuery] = useState('');
+  const { data, isLoading, isError, isFetching, refetch } = useSpaces();
+
+  const spaces = useMemo((): Space[] => data ?? [], [data]);
 
   const handleSpacePress = useCallback(
     (space: Space): void => {
@@ -38,10 +43,10 @@ export function HomeScreen(): React.JSX.Element {
   const filteredSpaces = useMemo((): Space[] => {
     const term = query.trim().toLowerCase();
     if (term === '') {
-      return MOCK_SPACES;
+      return spaces;
     }
 
-    return MOCK_SPACES.filter((space) => {
+    return spaces.filter((space) => {
       const searchable = [
         space.name,
         space.description,
@@ -53,7 +58,7 @@ export function HomeScreen(): React.JSX.Element {
 
       return searchable.includes(term);
     });
-  }, [query]);
+  }, [query, spaces]);
 
   const renderItem: ListRenderItem<Space> = useCallback(
     ({ item }) => <ItemCard item={item} onPress={handleSpacePress} />,
@@ -67,17 +72,55 @@ export function HomeScreen(): React.JSX.Element {
 
   const renderEmpty = useCallback(
     () => (
-      <View style={styles.empty}>
+      <View style={styles.state}>
         <Ionicons name="search-outline" size={44} color={COLORS.textMuted} />
-        <Text style={styles.emptyTitle}>Sin resultados</Text>
-        <Text style={styles.emptyText}>
-          No encontramos espacios para “{query.trim()}”. Prueba con otro nombre,
-          tipo de espacio o piso.
+        <Text style={styles.stateTitle}>
+          {query.trim() === '' ? 'Sin espacios publicados' : 'Sin resultados'}
+        </Text>
+        <Text style={styles.stateText}>
+          {query.trim() === ''
+            ? 'El catálogo del edificio está vacío por ahora. Desliza hacia abajo para volver a intentar.'
+            : `No encontramos espacios para “${query.trim()}”. Prueba con otro nombre, tipo de espacio o piso.`}
         </Text>
       </View>
     ),
     [query],
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.state}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={styles.stateTitle}>Cargando espacios…</Text>
+        <Text style={styles.stateText}>
+          Consultando el catálogo del edificio.
+        </Text>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.state}>
+        <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
+        <Text style={styles.stateTitle}>No pudimos cargar el catálogo</Text>
+        <Text style={styles.stateText}>
+          Revisa tu conexión a internet y vuelve a intentarlo.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+          onPress={() => {
+            void refetch();
+          }}
+          accessibilityRole="button"
+          testID="retry-button"
+        >
+          <Ionicons name="refresh-outline" size={18} color={COLORS.background} />
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -98,7 +141,7 @@ export function HomeScreen(): React.JSX.Element {
             accessibilityLabel="Buscar espacios"
           />
           <Text style={styles.resultCount}>
-            {filteredSpaces.length} de {MOCK_SPACES.length} espacios
+            {filteredSpaces.length} de {spaces.length} espacios
           </Text>
         </View>
 
@@ -109,8 +152,11 @@ export function HomeScreen(): React.JSX.Element {
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={renderSeparator}
           ListEmptyComponent={renderEmpty}
+          onRefresh={refetch}
+          refreshing={isFetching}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          testID="spaces-list"
         />
       </KeyboardAvoidingView>
     </View>
@@ -153,23 +199,43 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.md,
   },
-  empty: {
+  state: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: SPACING.xxl,
     paddingHorizontal: SPACING.lg,
     gap: SPACING.sm,
+    backgroundColor: COLORS.background,
   },
-  emptyTitle: {
+  stateTitle: {
     fontSize: TYPOGRAPHY.size.lg,
     fontWeight: TYPOGRAPHY.weight.semibold,
     color: COLORS.textSecondary,
+    textAlign: 'center',
   },
-  emptyText: {
+  stateText: {
     fontSize: TYPOGRAPHY.size.sm,
     color: COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.accent,
+  },
+  retryButtonPressed: {
+    opacity: 0.75,
+  },
+  retryButtonText: {
+    fontSize: TYPOGRAPHY.size.sm,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.background,
   },
 });
