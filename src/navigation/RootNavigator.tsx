@@ -3,8 +3,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { DetailScreen } from '../screens/DetailScreen';
-import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { SavedScreen } from '../screens/SavedScreen';
+import { useSavedStore } from '../stores/savedStore';
 import { COLORS } from '../theme';
 import type { HomeStackParamList, RootTabParamList } from './types';
 
@@ -37,6 +38,8 @@ function HomeStackNavigator(): React.JSX.Element {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootNavigator(): React.JSX.Element {
+  const savedCount = useSavedStore((state) => state.items.length);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -49,7 +52,7 @@ export function RootNavigator(): React.JSX.Element {
         },
         tabBarIcon: ({ color, size }) => {
           const iconName: keyof typeof Ionicons.glyphMap =
-            route.name === 'Home' ? 'business-outline' : 'heart-outline';
+            route.name === 'Home' ? 'business-outline' : 'bookmark-outline';
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -61,9 +64,12 @@ export function RootNavigator(): React.JSX.Element {
         options={{ tabBarLabel: 'Espacios' }}
       />
       <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{ tabBarLabel: 'Favoritos' }}
+        name="Saved"
+        component={SavedScreen}
+        options={{
+          tabBarLabel: 'Guardados',
+          tabBarBadge: savedCount > 0 ? savedCount : undefined,
+        }}
       />
     </Tab.Navigator>
   );

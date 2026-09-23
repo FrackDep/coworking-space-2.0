@@ -2,42 +2,62 @@ import React, { useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
+  Pressable,
   FlatList,
   StyleSheet,
   type ListRenderItem,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { MOCK_FAVORITES } from '../data/mockData';
+import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type Space } from '../types';
 import { formatCOP } from '../utils/format';
 
-interface FavoriteRowProps {
+interface SavedRowProps {
   item: Space;
+  onRemove: () => void;
 }
 
-function FavoriteRow({ item }: FavoriteRowProps): React.JSX.Element {
+function SavedRow({ item, onRemove }: SavedRowProps): React.JSX.Element {
   return (
     <View style={styles.card}>
-      <Ionicons name="heart-outline" size={20} color={COLORS.error} />
+      <Image source={item.image} style={styles.thumbnail} resizeMode="cover" />
 
       <View style={styles.cardContent}>
         <Text style={styles.cardType}>{SPACE_TYPE_LABEL[item.type]}</Text>
-        <Text style={styles.cardName}>{item.name}</Text>
-        <Text style={styles.cardDescription} numberOfLines={2}>
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.cardDescription} numberOfLines={1}>
           {item.description}
         </Text>
         <Text style={styles.cardPrice}>{formatCOP(item.pricePerHour)} / hora</Text>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.removeButton, pressed && styles.removeButtonPressed]}
+        onPress={onRemove}
+        accessibilityRole="button"
+        accessibilityLabel={`Quitar ${item.name} de guardados`}
+      >
+        <Ionicons name="close-outline" size={20} color={COLORS.error} />
+      </Pressable>
     </View>
   );
 }
 
-export function FavoritesScreen(): React.JSX.Element {
-  const renderFavorite: ListRenderItem<Space> = useCallback(
-    ({ item }) => <FavoriteRow item={item} />,
-    [],
+export function SavedScreen(): React.JSX.Element {
+  const items = useSavedStore((state) => state.items);
+  const removeItem = useSavedStore((state) => state.removeItem);
+  const clearAll = useSavedStore((state) => state.clearAll);
+
+  const renderItem: ListRenderItem<Space> = useCallback(
+    ({ item }) => (
+      <SavedRow item={item} onRemove={() => removeItem(item.id)} />
+    ),
+    [removeItem],
   );
 
   const renderSeparator = useCallback(
@@ -48,10 +68,10 @@ export function FavoritesScreen(): React.JSX.Element {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.empty}>
-        <Ionicons name="heart-outline" size={48} color={COLORS.textMuted} />
-        <Text style={styles.emptyTitle}>Todavía no tienes favoritos</Text>
+        <Ionicons name="bookmark-outline" size={48} color={COLORS.textMuted} />
+        <Text style={styles.emptyTitle}>Sin guardados aún</Text>
         <Text style={styles.emptyText}>
-          Explora los espacios del catálogo y guarda los que quieras reservar.
+          Abre un espacio del catálogo y toca “Guardar” para tenerlo a mano.
         </Text>
       </View>
     ),
@@ -61,20 +81,31 @@ export function FavoritesScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Favoritos</Text>
+        <Text style={styles.headerTitle}>Guardados</Text>
         <Text style={styles.headerSubtitle}>
-          Espacios que quieres reservar después
+          {items.length === 0
+            ? 'Espacios que guardes para reservar después'
+            : `${items.length} espacio${items.length === 1 ? '' : 's'} listo${
+                items.length === 1 ? '' : 's'
+              } para reservar`}
         </Text>
       </View>
 
       <FlatList
-        data={MOCK_FAVORITES}
+        data={items}
         keyExtractor={(item) => item.id}
-        renderItem={renderFavorite}
+        renderItem={renderItem}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={renderSeparator}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          items.length > 0 ? (
+            <Pressable onPress={clearAll} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>Limpiar todo</Text>
+            </Pressable>
+          ) : null
+        }
       />
     </View>
   );
@@ -108,15 +139,36 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.md,
   },
+  clearButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  clearButtonText: {
+    fontSize: TYPOGRAPHY.size.xs,
+    fontWeight: TYPOGRAPHY.weight.medium,
+    color: COLORS.error,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   card: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: SPACING.md,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: SPACING.base,
+    padding: SPACING.md,
+  },
+  thumbnail: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.md,
   },
   cardContent: {
     flex: 1,
@@ -129,7 +181,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  cardName: {
+  cardTitle: {
     fontSize: TYPOGRAPHY.size.base,
     fontWeight: TYPOGRAPHY.weight.semibold,
     color: COLORS.textPrimary,
@@ -137,13 +189,23 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: TYPOGRAPHY.size.sm,
     color: COLORS.textSecondary,
-    lineHeight: 18,
   },
   cardPrice: {
     fontSize: TYPOGRAPHY.size.sm,
     fontWeight: TYPOGRAPHY.weight.semibold,
     color: COLORS.success,
-    marginTop: SPACING.xs,
+    marginTop: 2,
+  },
+  removeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonPressed: {
+    opacity: 0.6,
   },
   empty: {
     flex: 1,

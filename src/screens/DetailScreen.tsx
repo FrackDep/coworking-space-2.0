@@ -1,14 +1,17 @@
 import React from 'react';
 import {
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 
 import { MOCK_SPACES } from '../data/mockData';
+import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL } from '../types';
 import { formatCOP, formatCapacity } from '../utils/format';
@@ -21,6 +24,23 @@ export function DetailScreen(): React.JSX.Element {
   const { id } = route.params;
 
   const space = MOCK_SPACES.find((item) => item.id === id);
+
+  const isItemSaved = useSavedStore((state) => state.isItemSaved);
+  const addItem = useSavedStore((state) => state.addItem);
+  const removeItem = useSavedStore((state) => state.removeItem);
+
+  const isSaved = space !== undefined && isItemSaved(space.id);
+
+  const handleToggleSave = (): void => {
+    if (space === undefined) {
+      return;
+    }
+    if (isSaved) {
+      removeItem(space.id);
+    } else {
+      addItem(space);
+    }
+  };
 
   if (space === undefined) {
     return (
@@ -88,6 +108,28 @@ export function DetailScreen(): React.JSX.Element {
             {space.available ? 'Disponible ahora' : 'Ocupado'}
           </Text>
         </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.saveButton,
+            isSaved && styles.saveButtonActive,
+            pressed && styles.saveButtonPressed,
+          ]}
+          onPress={handleToggleSave}
+          accessibilityRole="button"
+          testID="save-button"
+        >
+          <Ionicons
+            name="bookmark-outline"
+            size={18}
+            color={isSaved ? COLORS.background : COLORS.textPrimary}
+          />
+          <Text
+            style={[styles.saveButtonText, isSaved && styles.saveButtonTextActive]}
+          >
+            {isSaved ? 'Guardado' : 'Guardar'}
+          </Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -195,6 +237,33 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.size.base,
     fontWeight: TYPOGRAPHY.weight.semibold,
     color: COLORS.success,
+  },
+  saveButton: {
+    marginTop: SPACING.xl,
+    paddingVertical: SPACING.base,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  saveButtonActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+  saveButtonPressed: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    fontSize: TYPOGRAPHY.size.base,
+    fontWeight: TYPOGRAPHY.weight.semibold,
+    color: COLORS.textPrimary,
+  },
+  saveButtonTextActive: {
+    color: COLORS.background,
   },
   notFound: {
     flex: 1,

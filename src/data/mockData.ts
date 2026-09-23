@@ -146,9 +146,3 @@ export const MOCK_SPACES: Space[] = [
     image: require('../../assets/spaces/sala-eventos.jpg'),
   },
 ];
-
-const MOCK_FAVORITE_IDS: string[] = ['5', '9', '11'];
-
-export const MOCK_FAVORITES: Space[] = MOCK_SPACES.filter((space) =>
-  MOCK_FAVORITE_IDS.includes(space.id),
-);

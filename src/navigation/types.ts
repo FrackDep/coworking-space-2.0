@@ -2,7 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList> | undefined;
-  Favorites: undefined;
+  Saved: undefined;
 };
 
 export type HomeStackParamList = {
