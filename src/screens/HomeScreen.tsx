@@ -16,9 +16,11 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ItemCard } from '../components/ItemCard';
+import { usePreferences } from '../hooks/usePreferences';
 import { useSpaces } from '../hooks/useSpaces';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type Space } from '../types';
+import { sortSpaces } from '../utils/sortSpaces';
 import type { HomeStackParamList } from '../navigation/types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
@@ -29,9 +31,13 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
 export function HomeScreen(): React.JSX.Element {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [query, setQuery] = useState('');
-  const { data, isLoading, isError, isFetching, refetch } = useSpaces();
+  const { data, isLoading, isError, isFetching, isFromCache, refetch } = useSpaces();
+  const { sortOrder, compactMode, itemsPerPage } = usePreferences();
 
-  const spaces = useMemo((): Space[] => data ?? [], [data]);
+  const spaces = useMemo(
+    (): Space[] => sortSpaces(data ?? [], sortOrder),
+    [data, sortOrder],
+  );
 
   const handleSpacePress = useCallback(
     (space: Space): void => {
@@ -60,9 +66,16 @@ export function HomeScreen(): React.JSX.Element {
     });
   }, [query, spaces]);
 
+  const visibleSpaces = useMemo(
+    (): Space[] => filteredSpaces.slice(0, itemsPerPage),
+    [filteredSpaces, itemsPerPage],
+  );
+
   const renderItem: ListRenderItem<Space> = useCallback(
-    ({ item }) => <ItemCard item={item} onPress={handleSpacePress} />,
-    [handleSpacePress],
+    ({ item }) => (
+      <ItemCard item={item} onPress={handleSpacePress} compact={compactMode} />
+    ),
+    [handleSpacePress, compactMode],
   );
 
   const renderSeparator = useCallback(
@@ -141,12 +154,22 @@ export function HomeScreen(): React.JSX.Element {
             accessibilityLabel="Buscar espacios"
           />
           <Text style={styles.resultCount}>
-            {filteredSpaces.length} de {spaces.length} espacios
+            {visibleSpaces.length} de {spaces.length} espacios
           </Text>
         </View>
 
+        {isFromCache && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={18} color={COLORS.warning} />
+            <Text style={styles.offlineText}>
+              Mostrando datos sin red: el catálogo viene de la caché del
+              dispositivo.
+            </Text>
+          </View>
+        )}
+
         <FlatList
-          data={filteredSpaces}
+          data={visibleSpaces}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -191,6 +214,24 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.base,
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+    backgroundColor: COLORS.surface,
+  },
+  offlineText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.size.xs,
+    color: COLORS.warning,
+    lineHeight: 18,
   },
   list: {
     padding: SPACING.base,

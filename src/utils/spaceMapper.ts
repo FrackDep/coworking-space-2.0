@@ -69,6 +69,10 @@ const SPACE_NOTE: Record<SpaceType, string> = {
     'Auditorio con gradería, proyector, sonido profesional y área de catering.',
 };
 
+export function imageForType(type: SpaceType): ImageSourcePropType {
+  return SPACE_IMAGE[type];
+}
+
 export function toSpace(post: SpacePost): Space {
   const type = SPACE_TYPES[(post.id - 1) % SPACE_TYPES.length];
   const rooms = SPACE_ROOMS[type];

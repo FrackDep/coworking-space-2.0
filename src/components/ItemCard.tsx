@@ -14,9 +14,14 @@ import { formatCOP, formatCapacity } from '../utils/format';
 interface ItemCardProps {
   item: Space;
   onPress: (item: Space) => void;
+  compact?: boolean;
 }
 
-export function ItemCard({ item, onPress }: ItemCardProps): React.JSX.Element {
+export function ItemCard({
+  item,
+  onPress,
+  compact = false,
+}: ItemCardProps): React.JSX.Element {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -49,15 +54,20 @@ export function ItemCard({ item, onPress }: ItemCardProps): React.JSX.Element {
         </View>
 
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.description} numberOfLines={2}>
-          {item.description}
-        </Text>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>Piso {item.floor}</Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.meta}>{formatCapacity(item.capacity)}</Text>
-        </View>
+        {!compact && (
+          <>
+            <Text style={styles.description} numberOfLines={2}>
+              {item.description}
+            </Text>
+
+            <View style={styles.metaRow}>
+              <Text style={styles.meta}>Piso {item.floor}</Text>
+              <Text style={styles.metaDot}>·</Text>
+              <Text style={styles.meta}>{formatCapacity(item.capacity)}</Text>
+            </View>
+          </>
+        )}
 
         <Text style={styles.price}>{formatCOP(item.pricePerHour)} / hora</Text>
       </View>

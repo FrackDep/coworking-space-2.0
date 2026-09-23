@@ -1,99 +1,104 @@
-# Semana 06 — Formularios con React Hook Form + Zod
+# Semana 07 — Persistencia Local
 
 Proyecto del dominio **coworking space**: **Nido Coworking**, la app de un edificio
 de coworking de 5 pisos en Bogotá, con 6 tipos de espacio y precios en COP.
 
-Esta es la rama **`semana-06`**: contiene el proyecto completo hasta esta
+Esta es la rama **`semana-07`**: contiene el proyecto completo hasta esta
 semana, con el código en la **raíz** del repositorio. Parte de lo que dejó
-`semana-05` y le suma lo de esta semana, así que la historia de la rama son
-los 6 commits de las semanas 01 a 06.
+`semana-06` y le suma lo de esta semana, así que la historia de la rama son
+los 7 commits de las semanas 01 a 07.
 
 ## Qué pide el bootcamp
 
-1. **`FormField` genérico:** un componente que encapsule `Controller` +
-   `TextInput` + mensaje de error, reutilizado en Create y Edit
-2. **`CreateScreen`:** formulario con al menos 2 campos, validación Zod y la
-   mutación de TanStack Query, con navegación atrás en `onSuccess`
-3. **`EditScreen`:** el mismo formulario con `defaultValues` cargados del
-   servidor y `reset()` cuando llegan los datos
-4. **Validación activa:** errores visibles bajo cada campo al intentar enviar
-5. **Estado de carga:** botón deshabilitado y spinner durante el envío
+1. **`usePreferences` (MMKV):** al menos 3 preferencias reactivas que persistan
+   sin `async/await` y sin reiniciar la app
+2. **Caché offline en `useItems` (AsyncStorage):** guardar cuando hay red, leer
+   de la caché cuando falla, y mostrar el banner de "sin red" en `HomeScreen`
+3. **`SettingsScreen`:** controles para cada preferencia que persistan en tiempo
+   real, más una sección de seguridad con un dato sensible que **no** aparezca en
+   texto plano
+4. **`HomeScreen` actualizado:** aplicar el orden de las preferencias, el modo
+   compacto y mostrar los items cacheados con su banner cuando no hay red
 
 ## Qué implementé
 
-- **`src/schemas/spaceSchema.ts`:** esquema Zod con las reglas del dominio y el
-  tipo inferido con `z.infer`, sin ninguna interfaz duplicada.
+- **`src/storage/mmkv.ts`:** capa de almacenamiento con la API de MMKV. Detecta
+  si el módulo nativo está disponible (con un latido de escritura/lectura), usa
+  AsyncStorage como respaldo cuando no lo está y expone un sistema de
+  suscripción para que los cambios de preferencias viajen solos entre pantallas.
+- **`usePreferences`** con tres preferencias reactivas y persistidas:
 
-  | Campo | Regla |
-  | --- | --- |
-  | `name` | texto de 3 a 80 caracteres |
-  | `description` | texto de 10 a 500 caracteres |
-  | `type` | uno de los 6 tipos de espacio del edificio |
-  | `floor` | entero de 1 a 10 (`z.coerce.number()`) |
-  | `capacity` | entero de 1 a 40 personas |
-  | `pricePerHour` | mayor que 0 y máximo $ 500.000 COP |
+  | Preferencia | Valores | Efecto |
+  | --- | --- | --- |
+  | `sortOrder` | nombre · precio · piso | Ordena el catálogo |
+  | `compactMode` | activado / desactivado | Muestra solo nombre y precio en cada tarjeta |
+  | `itemsPerPage` | 5 · 10 · 20 | Cuántos espacios se listan |
 
-- **`FormField` genérico** (`src/components/FormField.tsx`): encapsula
-  `Controller` + `TextInput` + el mensaje de error, tipado con los genéricos de
-  React Hook Form (`Control`, `FieldPath`) y reutilizado en las dos pantallas.
-- **`CreateScreen`** validado con `zodResolver`: solo publica si el formulario es
-  válido y vuelve atrás cuando la mutación termina bien.
-- **`EditScreen`** con `defaultValues` del espacio que llega del servidor,
-  `reset()` cuando los datos están listos y `isDirty` para habilitar el botón
-  únicamente si hay cambios. Se llega desde el botón de lápiz del header del
-  detalle.
-- **`useUpdateSpace`** con `invalidateQueries` de la lista y del detalle.
-- Spinner (`ActivityIndicator`) y botón deshabilitado mientras `isPending`.
+- **Caché offline en `useSpaces`:** después de cada respuesta correcta guarda el
+  catálogo en AsyncStorage; si la red falla, sirve esa copia y activa el banner
+  **"Mostrando datos sin red"**. El caché guarda solo datos: las imágenes se
+  reconstruyen desde el tipo de espacio al leerlas.
+- **`SettingsScreen`** (pestaña *Ajustes*): las tres preferencias se guardan al
+  instante, sin botón de guardar, y se añade la sección **Seguridad** con Expo
+  SecureStore para guardar y comprobar el código de acceso del edificio. El
+  código nunca se muestra: la pantalla solo confirma si hay uno guardado.
+- **`ItemCard`** con modo compacto y **`HomeScreen`** aplicando orden, modo
+  compacto y el límite de espacios por página.
 
-## Nota técnica: la versión del resolver
+## Nota técnica: MMKV y Expo Go
 
-El starter de esta semana trae `@hookform/resolvers@5.4.0` junto a `zod@4.4.3`, y
-**esas dos versiones no son compatibles a nivel de tipos**: el resolver espera la
-verificación de Zod de la versión 3 y TypeScript rechaza el `useForm` completo.
-Aquí se usa `@hookform/resolvers@5.9.1`, que sí soporta Zod 4, y el `useForm` se
-tipa con `z.input` y `z.output` (`useForm<SpaceFormInput, unknown, SpaceFormData>`)
-porque los campos con `z.coerce` entran como texto y salen como número.
+`react-native-mmkv` es un módulo JSI/Nitro: **no existe dentro de Expo Go**, así
+que un `require` de MMKV ahí falla. `src/storage/mmkv.ts` coge el error y
+continúa con AsyncStorage, manteniendo la misma API y la misma reactividad, y la
+pantalla *Ajustes* indica cuál de los dos almacenamientos está activo. Para usar
+MMKV de verdad hace falta un development build (`pnpm expo run:android` con el
+SDK de Android instalado, o `eas build --profile development`).
 
 ## Verificación
 
 | Comprobación | Resultado |
 | --- | --- |
 | `pnpm exec tsc --noEmit` | 0 errores |
-| `expo export --platform android` | 1068 módulos |
-| Casos de validación ejecutados contra el esquema compilado | 15 casos: 2 válidos aceptados y 13 inválidos rechazados con su mensaje |
-
-Los casos inválidos cubiertos fueron: nombre corto, descripción corta, piso 0,
-piso 11, piso vacío, piso no numérico, capacidad 0, capacidad 41, precio 0,
-precio negativo, precio por encima del máximo, tipo inexistente y tipo ausente.
+| `expo export --platform android` | 1116 módulos |
+| Los tres órdenes probados en Node con 20 espacios | nombre, precio y piso ordenan correctamente |
+| Ida y vuelta de la caché | 20 espacios recuperados, 0 pérdidas, imágenes reconstruidas desde el tipo |
 
 ## Estructura de esta semana
 
 ```
-semana-06/  (raíz del repositorio)
-├── App.tsx                        QueryClientProvider + NavigationContainer
+semana-07/  (raíz del repositorio)
+├── App.tsx                        QueryClient + Navigation + hidratación
 ├── index.js                       Registro del componente raíz
 ├── app.json                       Configuración de Expo
-├── package.json                   Dependencias (RHF + Zod + resolvers)
+├── package.json                   Dependencias (MMKV, SecureStore, AsyncStorage)
 └── src/
     ├── components/
-    │   ├── FormField.tsx          Controller + TextInput + error (reutilizable)
-    │   └── ItemCard.tsx           Tarjeta que navega al detalle
-    ├── hooks/useSpaces.ts         useSpaces · useSpaceById · useCreate/UpdateSpace
+    │   ├── FormField.tsx          Controller + TextInput + error
+    │   └── ItemCard.tsx           Tarjeta con modo compacto
+    ├── hooks/
+    │   ├── usePreferences.ts      Preferencias MMKV reactivas
+    │   └── useSpaces.ts           useQuery con caché offline
     ├── navigation/
-    │   ├── RootNavigator.tsx      Tab + Stack (Home, Detail, Create, Edit)
+    │   ├── RootNavigator.tsx      Tab (Espacios · Guardados · Ajustes) + Stack
     │   └── types.ts               Listas de params tipadas
-    ├── schemas/spaceSchema.ts     Reglas Zod + tipos inferidos
+    ├── schemas/spaceSchema.ts     Reglas Zod de los formularios
     ├── screens/
-    │   ├── HomeScreen.tsx         Lista con estados de red
-    │   ├── DetailScreen.tsx       Detalle + botón de editar en el header
-    │   ├── CreateScreen.tsx       Formulario de creación validado
-    │   ├── EditScreen.tsx         Formulario de edición con reset()
-    │   └── SavedScreen.tsx        Guardados (Zustand)
+    │   ├── HomeScreen.tsx         Lista con banner sin red y preferencias
+    │   ├── DetailScreen.tsx       Detalle del espacio
+    │   ├── CreateScreen.tsx       Creación validada
+    │   ├── EditScreen.tsx         Edición con reset()
+    │   ├── SavedScreen.tsx        Guardados (Zustand)
+    │   └── SettingsScreen.tsx     Preferencias + SecureStore
     ├── services/api.ts            Instancia de Axios
+    ├── storage/mmkv.ts            MMKV con respaldo y suscripciones
     ├── stores/savedStore.ts       Estado global (Zustand)
     ├── theme/index.ts             COLORS · TYPOGRAPHY · SPACING · RADIUS
-    ├── types/index.ts             Space · payloads de crear y actualizar
-    └── utils/                     format · spaceMapper
+    ├── types/index.ts             Modelos y payloads del dominio
+    └── utils/
+        ├── format.ts              Precios COP y capacidad
+        ├── spaceCache.ts          Serialización de la caché
+        ├── spaceMapper.ts         API → dominio
+        └── sortSpaces.ts          Los tres órdenes del catálogo
 ```
 
 ## Cómo ejecutar
@@ -101,7 +106,7 @@ semana-06/  (raíz del repositorio)
 Desde tu copia del repositorio (mira la portada si aún no la tienes):
 
 ```bash
-git checkout semana-06
+git checkout semana-07
 pnpm install
 pnpm start
 ```
@@ -109,8 +114,9 @@ pnpm start
 Al cambiar de rama vuelve a ejecutar `pnpm install`: cada semana puede traer
 dependencias nuevas.
 
-Necesita internet, igual que la semana 05: el catálogo y los datos del formulario
-de edición vienen de la API.
+Esta rama contiene la app completa del bootcamp hasta la semana 07: es la
+versión más avanzada de Nido Coworking con el catálogo por red, formularios,
+estado global y persistencia local.
 
 ## Ejecutar en web
 
@@ -127,19 +133,27 @@ Para generar la versión estática (queda en `dist-web/`):
 pnpm exec expo export --platform web
 ```
 
+En web no existen MMKV ni SecureStore (son módulos nativos): las preferencias usan
+el almacenamiento del navegador (localStorage) a través de la misma API del
+proyecto (`src/storage/safeStorage.ts`) y la pantalla **Ajustes** indica cuál está
+activo. Los datos sensibles se guardan en `src/storage/secureStore.ts`, que usa el
+llavero del dispositivo en iOS/Android y localStorage en web. Si el navegador
+bloquea ese almacenamiento (por ejemplo dentro de un iframe con `sandbox`), la app
+no falla: detecta el bloqueo y continúa con memoria temporal durante la sesión.
+
 
 ## Capturas de esta semana
 
 | Archivo | Pantalla | Cómo llegar |
 | --- | --- | --- |
-| `06-validacion.png` | Errores de Zod bajo los campos | Tocar *Publicar* con el formulario vacío |
-| `06-editar.png` | Edición con datos del servidor | Detalle → ícono de lápiz del header |
+| `07-ajustes.png` | Preferencias y sección de seguridad | Pestaña *Ajustes* |
+| `07-offline.png` | Banner de datos sin red | Abrir la app en modo avión |
 
 Las capturas de esta entrega van en
 [`capturas/`](capturas/), dentro de esta rama.
 
 ## Rama y commit de esta semana
 
-Rama **`semana-06`** (una de las 9 ramas encadenadas del repositorio), con el commit:
+Rama **`semana-07`** (una de las 9 ramas encadenadas del repositorio), con el commit:
 
-`Semana 06 — Formularios con React Hook Form + Zod`
+`Semana 07 — Persistencia Local`

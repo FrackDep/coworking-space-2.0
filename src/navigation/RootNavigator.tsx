@@ -8,6 +8,7 @@ import { DetailScreen } from '../screens/DetailScreen';
 import { EditScreen } from '../screens/EditScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { SavedScreen } from '../screens/SavedScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { useSavedStore } from '../stores/savedStore';
 import { COLORS } from '../theme';
 import type { HomeStackParamList, RootTabParamList } from './types';
@@ -95,10 +96,13 @@ export function RootNavigator(): React.JSX.Element {
           borderTopColor: COLORS.border,
         },
         tabBarIcon: ({ color, size }) => {
-          const iconName: keyof typeof Ionicons.glyphMap =
-            route.name === 'Home' ? 'business-outline' : 'bookmark-outline';
+          const icons: Record<keyof RootTabParamList, keyof typeof Ionicons.glyphMap> = {
+            Home: 'business-outline',
+            Saved: 'bookmark-outline',
+            Settings: 'settings-outline',
+          };
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={icons[route.name]} size={size} color={color} />;
         },
       })}
     >
@@ -114,6 +118,11 @@ export function RootNavigator(): React.JSX.Element {
           tabBarLabel: 'Guardados',
           tabBarBadge: savedCount > 0 ? savedCount : undefined,
         }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Ajustes' }}
       />
     </Tab.Navigator>
   );
