@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────
+# Nido Coworking — .gitignore
+# ─────────────────────────────────────────────────────────────
+
+# Dependencias
+node_modules/
+
+# Expo / Metro
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Builds nativos
+android/
+ios/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Logs y sistema
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+
+# Editores
+.idea/
+*.swp
