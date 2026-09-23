@@ -9,18 +9,31 @@ import {
   StyleSheet,
   type ListRenderItem,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ItemCard } from '../components/ItemCard';
 import { MOCK_SPACES } from '../data/mockData';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import { SPACE_TYPE_LABEL, type Space } from '../types';
+import type { HomeStackParamList } from '../navigation/types';
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  HomeStackParamList,
+  'HomeList'
+>;
 
 export function HomeScreen(): React.JSX.Element {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [query, setQuery] = useState('');
 
-  const handleSpacePress = useCallback((space: Space): void => {
-    console.log('Espacio seleccionado:', space.name);
-  }, []);
+  const handleSpacePress = useCallback(
+    (space: Space): void => {
+      navigation.navigate('HomeDetail', { id: space.id, name: space.name });
+    },
+    [navigation],
+  );
 
   const filteredSpaces = useMemo((): Space[] => {
     const term = query.trim().toLowerCase();
@@ -55,6 +68,7 @@ export function HomeScreen(): React.JSX.Element {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.empty}>
+        <Ionicons name="search-outline" size={44} color={COLORS.textMuted} />
         <Text style={styles.emptyTitle}>Sin resultados</Text>
         <Text style={styles.emptyText}>
           No encontramos espacios para “{query.trim()}”. Prueba con otro nombre,
@@ -67,13 +81,6 @@ export function HomeScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Nido Coworking</Text>
-        <Text style={styles.headerSubtitle}>
-          Espacios de trabajo flexibles · Bogotá
-        </Text>
-      </View>
-
       <KeyboardAvoidingView
         style={styles.body}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -114,22 +121,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.size.xxl,
-    fontWeight: TYPOGRAPHY.weight.bold,
-    color: COLORS.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: TYPOGRAPHY.size.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   body: {
     flex: 1,

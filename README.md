@@ -1,65 +1,60 @@
-# Semana 02 — Listas, Inputs y Estilos
+# Semana 03 — React Navigation 7
 
 Proyecto del dominio **coworking space**: **Nido Coworking**, la app de un edificio
 de coworking de 5 pisos en Bogotá, con 6 tipos de espacio y precios en COP.
 
-Esta es la rama **`semana-02`**: contiene el proyecto completo hasta esta
+Esta es la rama **`semana-03`**: contiene el proyecto completo hasta esta
 semana, con el código en la **raíz** del repositorio. Parte de lo que dejó
-`semana-01` y le suma lo de esta semana, así que la historia de la rama son
-los 2 commits de las semanas 01 a 02.
+`semana-02` y le suma lo de esta semana, así que la historia de la rama son
+los 3 commits de las semanas 01 a 03.
 
 ## Qué pide el bootcamp
 
-1. App funcional en simulador iOS y/o Android
-2. Al menos 10 items del dominio asignado en `mockData.ts`
-3. Búsqueda funcionando en tiempo real
-4. `README.md` en la raíz de tu entrega con: descripción del dominio, captura de
-   pantalla (o descripción de las pantallas) y decisiones de diseño tomadas
+1. App funcional en simulador iOS y/o Android con navegación Tab + Stack
+2. Código TypeScript sin errores, sin `any`, tipos de params correctos
+3. Datos y pantallas adaptados al dominio asignado
+4. Capturas de pantalla de las 3 pantallas (Home, Detail, Favorites)
+5. README actualizado con descripción breve del dominio y la implementación
 
-**Criterios de la rúbrica:** `keyExtractor` por id, `useMemo`, `useCallback`,
-`ItemSeparatorComponent`, `KeyboardAvoidingView`, constantes de tema y ningún
-`any`.
+**Criterios de la rúbrica:** params tipados con al menos `id` y `name`, íconos
+Ionicons en la tab bar y `tabBarActiveTintColor: '#61DAFB'`.
 
 ## Qué implementé
 
-- **Catálogo de 12 espacios** (2 por cada tipo del dominio) con descripción,
-  piso, capacidad, precio por hora y badge de disponibilidad.
-- **Búsqueda en tiempo real** con `TextInput` y `useMemo`: filtra por nombre,
-  tipo de espacio, descripción y piso, sin recalcular en cada render.
-- **Estado vacío** cuando la búsqueda no encuentra nada, mostrando el término
-  buscado. Es texto, sin íconos: los Ionicons llegan en la semana 03.
-- **`FlatList` virtualizada** con `keyExtractor` por id, `useCallback` en
-  `renderItem` y en el estado vacío, y `ItemSeparatorComponent` entre tarjetas.
-- **`KeyboardAvoidingView`** para que el teclado no tape la lista.
-- **Sistema de tema centralizado** en `src/theme` (COLORS, TYPOGRAPHY, SPACING,
-  RADIUS): todos los `StyleSheet` leen de ahí, sin colores ni medidas sueltas.
-- **Corrección de compilación:** la prop `backgroundColor` de `expo-status-bar`
-  ya no existe en el SDK 57 y rompía el archivo del starter; aquí se omite.
-
-## Decisiones de diseño
-
-| Decisión | Por qué |
-| --- | --- |
-| Buscar también por piso y tipo, no solo por nombre | En un edificio de 5 pisos la gente busca "piso 3" o "cabina", no el nombre exacto de la sala |
-| Badge *Disponible / Ocupado* visible en la tarjeta | Es la información que más se consulta al reservar |
-| Tema centralizado en lugar de estilos sueltos | Evita repetir colores y permite cambiar el aspecto en un solo archivo |
+- **Tab Navigator con dos pestañas** (*Espacios* y *Guardados*) y un **Stack
+  anidado** dentro de la primera: `HomeList` → `HomeDetail`.
+- **Params tipados de verdad:** `RootTabParamList` y `HomeStackParamList` en
+  `src/navigation/types.ts`, sin ningún `any` en el proyecto.
+- **Tab bar con íconos de línea** de Ionicons (`business-outline` y
+  `bookmark-outline`), con el acento `#61DAFB` del tema para la pestaña activa.
+- **`DetailScreen`** que recibe `id` y `name` por params, busca el espacio y
+  muestra la ficha completa: imagen, tipo, disponibilidad, piso, capacidad y
+  precio por hora. Incluye el caso borde de un id que no existe.
+- **`FavoritesScreen`** con favoritos de ejemplo y su estado vacío, listos para
+  conectarse al estado global de la semana 04.
+- Header descriptivo por pantalla: el título del detalle es el nombre del espacio.
 
 ## Estructura de esta semana
 
 ```
-semana-02/  (raíz del repositorio)
-├── App.tsx                      Componente raíz
-├── index.js                     Registro del componente raíz
-├── app.json                     Configuración de Expo
-├── package.json                 Dependencias de la semana
-├── assets/spaces/               Fotos locales de los 6 tipos de espacio
+semana-03/  (raíz del repositorio)
+├── App.tsx                          NavigationContainer + SafeAreaProvider
+├── index.js                         Registro del componente raíz
+├── app.json                         Configuración de Expo
+├── package.json                     Dependencias de la semana
 └── src/
-    ├── components/ItemCard.tsx  Tarjeta del espacio con badge
-    ├── data/mockData.ts         12 espacios del edificio
-    ├── screens/HomeScreen.tsx   Buscador + FlatList + estados
-    ├── theme/index.ts           COLORS · TYPOGRAPHY · SPACING · RADIUS
-    ├── types/index.ts           Modelo Space y tipos de espacio
-    └── utils/format.ts          Formato de precios COP y capacidad
+    ├── components/ItemCard.tsx      Tarjeta que navega al detalle
+    ├── data/mockData.ts             12 espacios del edificio
+    ├── navigation/
+    │   ├── RootNavigator.tsx        Tab + Stack anidado
+    │   └── types.ts                 Listas de params tipadas
+    ├── screens/
+    │   ├── HomeScreen.tsx           Catálogo con búsqueda
+    │   ├── DetailScreen.tsx         Ficha del espacio (params tipados)
+    │   └── FavoritesScreen.tsx      Favoritos de ejemplo
+    ├── theme/index.ts               COLORS · TYPOGRAPHY · SPACING · RADIUS
+    ├── types/index.ts               Modelo Space y tipos de espacio
+    └── utils/format.ts              Formato de precios COP y capacidad
 ```
 
 ## Cómo ejecutar
@@ -67,7 +62,7 @@ semana-02/  (raíz del repositorio)
 Desde tu copia del repositorio (mira la portada si aún no la tienes):
 
 ```bash
-git checkout semana-02
+git checkout semana-03
 pnpm install
 pnpm start
 ```
@@ -79,8 +74,8 @@ dependencias nuevas.
 
 | Comprobación | Resultado |
 | --- | --- |
-| `pnpm exec tsc --noEmit` | 0 errores |
-| `expo export --platform android` | 591 módulos |
+| `pnpm exec tsc --noEmit` | 0 errores (sin `any`) |
+| `expo export --platform android` | 922 módulos |
 
 ## Ejecutar en web
 
@@ -102,14 +97,14 @@ pnpm exec expo export --platform web
 
 | Archivo | Pantalla | Cómo llegar |
 | --- | --- | --- |
-| `02-busqueda.png` | Buscador filtrando | Escribir `sala` en el buscador |
-| `02-estado-vacio.png` | Estado vacío | Escribir `zzz` en el buscador |
+| `03-detalle.png` | Detalle de un espacio | Tocar la tarjeta *Sala de Juntas · Aurora* |
+| `03-guardados.png` | Pestaña de favoritos | Tocar la pestaña *Guardados* |
 
 Las capturas de esta entrega van en
 [`capturas/`](capturas/), dentro de esta rama.
 
 ## Rama y commit de esta semana
 
-Rama **`semana-02`** (una de las 9 ramas encadenadas del repositorio), con el commit:
+Rama **`semana-03`** (una de las 9 ramas encadenadas del repositorio), con el commit:
 
-`Semana 02 — Listas, Inputs y Estilos`
+`Semana 03 — React Navigation 7`
